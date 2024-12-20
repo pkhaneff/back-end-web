@@ -1,0 +1,13 @@
+services:
+  app:
+    build:
+      context: .
+    container_name: be-web
+    ports:
+      - 3000:3000
+    environment:
+      MONGO: ${MONGO}
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: ${PORT}
+    env_file:
+      - ./.env
