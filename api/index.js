@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 import route from './routes/index.route.js'
 import db from './config/db.js'
 import cookieParser from 'cookie-parser'
+import cors from 'cors'
 
 dotenv.config()
 
@@ -18,6 +19,13 @@ db.connect()
 app.listen(process.env.PORT, () => {
     console.log('Server is running !')
 })
+
+app.use(cors({
+    origin: process.env.CLIENT_URL || '*',  
+    credentials: true,                      
+    methods: '*',                           
+    allowedHeaders: '*',                
+}))
 
 app.use((err, req, res, next) => {
     const statusCode = err.statusCode || 500;
