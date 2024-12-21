@@ -9,19 +9,7 @@ dotenv.config()
 
 const app = express();
 
-// Cấu hình CORS
-const corsOptions = {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',  // Đảm bảo rằng CLIENT_URL là URL frontend của bạn
-    credentials: true,  // Cho phép gửi thông tin xác thực (cookie, JWT token)
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-};
-
-// Sử dụng middleware CORS
-app.use(cors(corsOptions));
-
-// Cấu hình OPTIONS để trả về các header CORS cho preflight request
-app.options('*', cors(corsOptions)); 
+app.use(cors())
 
 app.use(express.json())
 app.use(cookieParser())
