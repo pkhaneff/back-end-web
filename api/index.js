@@ -27,13 +27,6 @@ app.listen(process.env.PORT, () => {
     console.log('Server is running !')
 })
 
-app.use(cors({
-    origin: process.env.CLIENT_URL || '*',  
-    credentials: true,                      
-    methods: '*',                           
-    allowedHeaders: '*',                
-}))
-
 app.use((err, req, res, next) => {
     const statusCode = err.statusCode || 500;
     const message = err.message || 'Internal Server Error'
