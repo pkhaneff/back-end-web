@@ -9,29 +9,26 @@ dotenv.config()
 
 const app = express();
 
-app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+// Cấu hình CORS
+const corsOptions = {
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',  // Đảm bảo rằng CLIENT_URL là URL frontend của bạn
+    credentials: true,  // Cho phép gửi thông tin xác thực (cookie, JWT token)
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+};
 
-app.options('*', cors());
+// Sử dụng middleware CORS
+app.use(cors(corsOptions));
 
-app.use((req, res, next) => {
-    console.log(`Request Method: ${req.method}, URL: ${req.url}`);
-    next();
-});
+// Cấu hình OPTIONS để trả về các header CORS cho preflight request
+app.options('*', cors(corsOptions)); 
 
 app.use(express.json())
 app.use(cookieParser())
 
-route(app) 
-
 db.connect()
 
-app.listen(process.env.PORT, () => {
-    console.log('Server is running !')
-})
+route(app) 
 
 app.use((err, req, res, next) => {
     const statusCode = err.statusCode || 500;
@@ -41,4 +38,8 @@ app.use((err, req, res, next) => {
         statusCode,
         message
     })
+})
+
+app.listen(process.env.PORT, () => {
+    console.log('Server is running !')
 })
