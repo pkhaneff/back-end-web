@@ -10,12 +10,18 @@ dotenv.config()
 const app = express();
 
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',  
-    credentials: true,                                         
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",      
-    allowedHeaders: ['Content-Type', 'Authorization'],         
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
+app.options('*', cors()); // Xử lý OPTIONS
+
+app.use((req, res, next) => {
+    console.log(`Request Method: ${req.method}, URL: ${req.url}`);
+    next();
+});
 
 app.use(express.json())
 app.use(cookieParser())
