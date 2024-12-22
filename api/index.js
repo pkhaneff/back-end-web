@@ -9,25 +9,32 @@ dotenv.config()
 
 const app = express();
 
-app.use(cors())
+const corsOptions = {
+    origin: 'http://localhost:5173', 
+    credentials: true, 
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], 
+    allowedHeaders: ['Content-Type', 'Authorization'], 
+};
 
-app.use(express.json())
-app.use(cookieParser())
+app.use(cors(corsOptions));
 
-db.connect()
+app.use(express.json());
+app.use(cookieParser());
 
-route(app) 
+db.connect();
+
+route(app);
 
 app.use((err, req, res, next) => {
     const statusCode = err.statusCode || 500;
-    const message = err.message || 'Internal Server Error'
+    const message = err.message || 'Internal Server Error';
     res.status(statusCode).json({
         success: false,
         statusCode,
-        message
-    })
-})
+        message,
+    });
+});
 
 app.listen(process.env.PORT, () => {
-    console.log('Server is running !')
-})
+    console.log('Server is running !');
+});
