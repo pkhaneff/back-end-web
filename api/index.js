@@ -18,31 +18,32 @@ const corsOptions = {
             callback(new Error('Not allowed by CORS'));
         }
     },
-    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: true, 
 };
-
-
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); 
 
-app.use(express.json());
-app.use(cookieParser());
+app.use(cookieParser())
 
-db.connect();
+app.use(express.json())
 
-route(app);
+route(app) 
+
+db.connect()
+
+app.listen(process.env.PORT, () => {
+    console.log('Server is running !')
+})
 
 app.use((err, req, res, next) => {
     const statusCode = err.statusCode || 500;
-    const message = err.message || 'Internal Server Error';
+    const message = err.message || 'Internal Server Error'
+    console.log("Err details: ", err)
     res.status(statusCode).json({
         success: false,
         statusCode,
-        message,
-    });
-});
-
-app.listen(process.env.PORT, () => {
-    console.log('Server is running !');
-});
+        message
+    })
+})

@@ -38,7 +38,7 @@ export const signin = async (req, res, next) => {
 
         if(!validUser){
             return next(errorHandler(404, 'User not found'))
-        }
+        }   
 
         const validPassword = bcryptjs.compareSync(password, validUser.password)
         if(!validPassword){
@@ -47,15 +47,10 @@ export const signin = async (req, res, next) => {
 
         const token = jwt.sign({id: validUser._id, isAdmin: validUser.isAdmin}, process.env.JWT_SECRET)
         const {password: pass, ...rest} = validUser._doc
-        res.status(200).cookie('access_token', token, { 
-            httpOnly:true,
-            secure: false,
-            sameSite: 'none',
-            path: '/',
-        }).json({
-            success: true,
-            access_token: token,
-            rest,
+        
+        res.status(200).json({
+            ...rest,             
+            access_token: token  
         })
     } catch (error) {
         next(error)
