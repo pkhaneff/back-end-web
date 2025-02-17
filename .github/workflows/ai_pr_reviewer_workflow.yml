@@ -1,0 +1,41 @@
+name: BAP AI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: read
+  
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          pip install -r .ai/io/nerdythings/requirements.txt
+          
+      - name: Run AI Reviewer
+        env:
+          CHATGPT_KEY: ${{ secrets.CHATGPT_KEY }}
+          CHATGPT_MODEL: ${{ secrets.CHATGPT_MODEL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_EXTENSIONS: ${{ vars.TARGET_EXTENSIONS }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          PULL_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python .ai/io/nerdythings/github_reviewer.py
