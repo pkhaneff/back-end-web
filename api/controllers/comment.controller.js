@@ -13,7 +13,7 @@ export const createcomment = async (req, res, next) => {
             postId
         })
 
-        await newComment.save()
+        await newComment.saved()
 
         res.status(200).json(newComment)
     } catch (error) {
