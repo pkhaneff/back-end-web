@@ -44,12 +44,10 @@ class AiBot(ABC):
         Sửa lại phương thức `.saved()` thành `.save()` để tránh lỗi.            
                 
         **Note:**
-
         *   `Code` and `Suggested Fix` are wrapped with ```diff to show code diffs and fixes.
         *   Titles and instructions are formatted for readability.
 
         **Reason for modification:**
-
         *   Removed complex Markdown like bullet points for easy copying.
         *   Used simple titles to differentiate sections.
         *   Kept code blocks to easily identify diffs and fixes.
