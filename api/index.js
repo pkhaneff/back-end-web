@@ -43,7 +43,7 @@ app.use((err, req, res, next) => {
     console.log("Err details: ", err)
     res.status(statusCode).json({
         success: false,
-        statusCode,
+        statusCode
         message
     })
 })
