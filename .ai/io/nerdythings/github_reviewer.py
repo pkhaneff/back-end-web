@@ -12,9 +12,6 @@ from env_vars import EnvVars
 from repository.github import GitHub
 from repository.repository import RepositoryError
 
-separator = "\n\n----------------------------------------------------------------------\n\n"
-log_file = open('output.txt', 'a')
-
 def main():
     vars = EnvVars()
     vars.check_vars()
@@ -30,13 +27,19 @@ def main():
     if len(changed_files) == 0: 
         Log.print_red("No changes between branch")
 
+    excluded_dirs = {".ai/io/nerdythings", ".github/workflows"}
+    
     for file in changed_files:
+        if any(file.startswith(excluded) for excluded in excluded_dirs):
+            Log.print_yellow(f"Skipping file in excluded directory: {file}")
+            continue
+
         Log.print_green("Checking file", file)
 
         _, file_extension = os.path.splitext(file)
         file_extension = file_extension.lstrip('.')
         if file_extension not in vars.target_extensions:
-            Log.print_yellow(f"Skipping, unsuported extension {file_extension} file {file}")
+            Log.print_yellow(f"Skipping, unsupported extension {file_extension} file {file}")
             continue
 
         try:
@@ -46,25 +49,23 @@ def main():
             Log.print_yellow("File was removed. Continue.", file)
             continue
 
-        if len( file_content ) == 0: 
+        if len(file_content) == 0: 
             Log.print_red("File is empty")
             continue
 
         file_diffs = Git.get_diff_in_file(remote_name=remote_name, head_ref=vars.head_ref, base_ref=vars.base_ref, file_path=file)
-        if len( file_diffs ) == 0: 
+        if len(file_diffs) == 0: 
             Log.print_red("Diffs are empty")
         
         Log.print_green(f"Asking AI. Content Len:{len(file_content)} Diff Len: {len(file_diffs)}")
         response = ai.ai_request_diffs(code=file_content, diffs=file_diffs)
-
-        log_file.write(f"{separator}{file_content}{separator}{file_diffs}{separator}{response}{separator}")
 
         if AiBot.is_no_issues_text(response):
             Log.print_green("File looks good. Continue", file)
         else:
             responses = AiBot.split_ai_response(response)
             if len(responses) == 0:
-                Log.print_red("Responses where not parsed:", responses)
+                Log.print_red("Responses were not parsed:", responses)
 
             result = False
             for response in responses:
@@ -75,6 +76,7 @@ def main():
                 if not result:
                     raise RepositoryError("Failed to post any comments.")
                     
+
 def post_line_comment(github: GitHub, file: str, text:str, line: int):
     Log.print_green("Posting line", file, line, text)
     try:
@@ -103,5 +105,3 @@ def post_general_comment(github: GitHub, file: str, text:str) -> bool:
 
 if __name__ == "__main__":
     main()
-
-log_file.close()
