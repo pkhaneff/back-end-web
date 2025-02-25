@@ -1,6 +1,4 @@
-# Apache License
-# Version 2.0, January 2004
-# Author: Eugene Tkachenko
+
 
 class Log:
     # ANSI escape codes for some colors
