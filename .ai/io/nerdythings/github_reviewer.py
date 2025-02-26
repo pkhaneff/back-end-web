@@ -122,27 +122,35 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
 
     latest_commit_id = github.get_latest_commit_id()
 
+    comments_for_line = {}
     diff_lines = file_diffs.split("\n")
     line_number = None
-
-    comments_for_line = {}
+    deleted_lines = 0
 
     for diff in diff_lines:
         if diff.startswith("@@"):
-            match = re.search(r"\+(\d+)", diff)
+            match = re.search(r"\@\@ -\d+,\d+ \+(\d+),\d+ \@\@", diff)
             if match:
                 line_number = int(match.group(1))
+                deleted_lines = 0  # Reset deleted lines count
                 Log.print_yellow(f"New diff hunk: {diff}, starting at line {line_number}")
             continue
 
+        if diff.startswith("-"):
+            deleted_lines += 1
+            continue
+
         if diff.startswith("+") and line_number:
+            line_number -= deleted_lines  # Adjust for deleted lines
+            deleted_lines = 0  # Reset after adjustment
+
             if line_number not in comments_for_line:
                 comments_for_line[line_number] = []
 
             for suggestion in suggestions:
                 comments_for_line[line_number].append(suggestion)
 
-            line_number += 1
+            line_number += 1  # Move to next line
 
     for line_number, suggestions in comments_for_line.items():
         combined_comment_body = ""
