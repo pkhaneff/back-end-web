@@ -106,7 +106,6 @@ def process_file(file, ai, github, vars, reviewed_files):
 
     handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
 
-
 def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars):
     if not response or AiBot.is_no_issues_text(response):
         Log.print_green(f"No issues detected in {file}.")
@@ -126,7 +125,6 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
     diff_lines = file_diffs.split("\n")
     line_number = None
 
-    # Gom góp các comment cho cùng một dòng để tạo thành một comment duy nhất
     comments_for_line = {}
 
     for diff in diff_lines:
@@ -138,7 +136,6 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
             continue
 
         if diff.startswith("+") and line_number:
-            # Khởi tạo list nếu chưa có
             if line_number not in comments_for_line:
                 comments_for_line[line_number] = []
 
@@ -147,30 +144,27 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
 
             line_number += 1
 
-    # Sau khi đã duyệt hết diff, tiến hành post comment
     for line_number, suggestions in comments_for_line.items():
-        # Tạo comment body tổng hợp
         combined_comment_body = ""
         for suggestion in suggestions:
             comment_body = f"- {suggestion['text'].strip()}"
             combined_comment_body += comment_body + "\n"
 
-        # Kiểm tra comment đã tồn tại hay chưa
         if combined_comment_body.strip() not in existing_comment_bodies:
             Log.print_yellow(f"Posting combined comment to line {line_number}: {combined_comment_body.strip()}")
             try:
                 github.post_comment_to_line(
-                    text=combined_comment_body.strip(),  # Post comment tổng hợp
+                    text=combined_comment_body.strip(),
                     commit_id=latest_commit_id,
                     file_path=file,
-                    line=line_number # Use line parameter for creating new comments
+                    line=line_number 
                 )
                 Log.print_yellow(f"Posted review comment at line {line_number}: {combined_comment_body.strip()}")
             except RepositoryError as e:
                 Log.print_red(f"Failed to post review comment: {e}")
         else:
             Log.print_yellow(f"Skipping comment: Combined comment already exists")
-            
+
 def parse_ai_suggestions(response):
     if not response:
         return []
@@ -181,7 +175,6 @@ def parse_ai_suggestions(response):
         if suggestion_text:
             suggestions.append({"text": suggestion_text})
     return suggestions
-
 
 if __name__ == "__main__":
     main()
