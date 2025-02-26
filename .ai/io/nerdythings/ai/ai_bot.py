@@ -21,14 +21,12 @@ class AiBot(ABC):
 
         **Output Format:**
         Each issue should follow the following Markdown format, resembling a commit log:
-
-        ```markdown
+        
         ### [Line {line_number}] - [{severity}] - [{type}] - {issue_description}
 
         **Code:**
         diff
         {code}
-        ```
 
         Suggested Fix (nếu có):
         {suggested_fix}
