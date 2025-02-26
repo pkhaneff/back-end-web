@@ -105,34 +105,51 @@ class AiBot(ABC):
         return source_no_spaces.startswith(target)
     
     @staticmethod
-    def split_ai_response(input) -> list[LineComment]:
+    def split_ai_response(input, total_lines_in_code) -> list[LineComment]:
         if not input:
             return []
 
-        lines = input.strip().split("\n")
         comments = []
+        # Tách các entry bằng dấu ###
+        entries = re.split(r"###", input.strip())
 
-        for full_text in lines:
-            full_text = full_text.strip()
-            if not full_text:
+        for entry in entries:
+            entry = entry.strip()
+            if not entry:
                 continue
 
-            # Improved regex to match the required format more accurately
-            match = re.match(r"### \[Line (\d+)\] - \[(Warning|Error|Critical)\] - \[(.*?)\] - (.*)", full_text)
-            if match and all(match.groups()):
+            # Tìm kiếm các thông tin cần thiết từ mỗi entry
+            match = re.match(r"\s*\[Line\s*(\d+)\s*\]\s*-\s*\[(Warning|Error|Critical)\]\s*-\s*\[(.*?)\]\s*-\s*(.*)", entry)
+
+            if match:
                 line_number, severity, issue_type, description = match.groups()
-                line_number = int(line_number)
+                try:
+                    line_number = int(line_number)
+                except ValueError:
+                    print(f"Warning: Could not parse line number: {line_number}")
+                    continue  # Bỏ qua entry nếu không parse được line number
 
                 if line_number < 1 or line_number > total_lines_in_code:
+                    print(f"Warning: Line number out of range: {line_number}")
                     continue
+                
+                # Tìm kiếm code và suggested fix
+                code_match = re.search(r"Code:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
+                code = code_match.group(1).strip() if code_match else ""
 
-                clean_description = description.capitalize().strip()
-                if not clean_description.endswith("."):
-                    clean_description += "."
+                fix_match = re.search(r"Suggested Fix \(nếu có\):\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
+                suggested_fix = fix_match.group(1).strip() if fix_match else ""
 
-                comments.append(LineComment(line=line_number, text=f"### [{severity}] [{issue_type}]\n\n{clean_description}"))
+                # Tạo comment với đầy đủ thông tin
+                comment_text = f"### [{severity}] [{issue_type}]\n\n{description.strip()}\n\n"
+                if code:
+                    comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
+                if suggested_fix:
+                    comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
 
+                comments.append(LineComment(line=line_number, text=comment_text))
             else:
-                comments.append(LineComment(line=0, text=full_text))
+                # Nếu không khớp format chuẩn, coi như là 1 comment tự do
+                comments.append(LineComment(line=0, text=entry))
 
         return comments

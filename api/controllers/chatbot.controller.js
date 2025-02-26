@@ -1,6 +1,6 @@
 import Chatbot from "../models/chatbot.model.js"
 import Prompt from "../models/prompt.model.js"
-import { errorHandler } from "../utils/error.js"
+import errorHandler from "../utils/error.js"
 
 export const importdata = async (req, res, next) => {
     if(!req.user.isAdmin){

@@ -125,6 +125,10 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
     diff_lines = file_diffs.split("\n")
     line_number = None  
 
+    total_lines_in_code = len(open(file, 'r').readlines()) 
+
+    suggestions = AiBot.split_ai_response(response, total_lines_in_code)
+
     for diff in diff_lines:
         if diff.startswith("@@"):
             match = re.search(r"\+(\d+)", diff)
