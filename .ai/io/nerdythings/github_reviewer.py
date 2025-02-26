@@ -130,8 +130,7 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
             match = re.search(r"\+(\d+)", diff)
             if match:
                 line_number = int(match.group(1))
-                Log.print_yellow(f"Diff hunk start: {diff}, line_number: {line_number}")  
-            hunk_start_index = len(diff) + 1 
+                Log.print_yellow(f"Diff hunk start: {diff}, line_number: {line_number}")
             continue
 
         if diff.startswith("+") and line_number:
@@ -139,18 +138,15 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
                 comment_body = f"- {suggestion['text'].strip()}"
 
                 if comment_body not in existing_comment_bodies:
-                    position = hunk_start_index + diff_lines.index(diff) 
-
-                    Log.print_yellow(f"Posting comment to line {line_number}, position {position}: {comment_body}")
+                    Log.print_yellow(f"Posting comment to line {line_number}: {comment_body}")
                     try:
                         github.post_comment_to_line(
                             text=comment_body,
                             commit_id=latest_commit_id,
                             file_path=file,
-                            line=line_number,  
-                            position=position 
+                            line=line_number
                         )
-                        Log.print_yellow(f"Posted review comment at line {line_number}, position {position}: {suggestion['text'].strip()}")
+                        Log.print_yellow(f"Posted review comment at line {line_number}: {suggestion['text'].strip()}")
                     except RepositoryError as e:
                         Log.print_red(f"Failed to post review comment: {e}")
 
