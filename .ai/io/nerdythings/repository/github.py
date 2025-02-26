@@ -149,43 +149,47 @@ class GitHub(Repository):
         if not diff_text:
             return None
 
-        hunk_start_pattern = re.compile(r"@@ -(\d+),(\d+) \+(\d+),(\d+) @@")
+        hunk_start_pattern = re.compile(r"@@ -(\d+),?(\d*) \+(\d+),?(\d*) @@")
         lines = diff_text.splitlines()
         current_hunk = None
         hunk_lines = []
-        relevant_lines = []
+        hunk_start_index = None
 
         for i, line in enumerate(lines):
-            if line.startswith("diff --git"):
-                if file_path not in line:
-                    continue
+            if line.startswith("diff --git") and file_path not in line:
+                continue
             elif line.startswith("@@"):
                 match = hunk_start_pattern.match(line)
                 if match:
-                    new_start, new_length = map(int, match.groups())
-                    if new_start <= line_number <= new_start + new_length:
+                    old_start, old_length, new_start, new_length = match.groups()
+
+                    try:
+                        new_start = int(new_start)
+                        new_length = int(new_length) if new_length else 1
+                    except ValueError:
+                        print(f"Invalid number format in diff hunk: {line}")
+                        return None
+
+                    if new_start <= line_number <= new_start + new_length - 1:
                         current_hunk = {
                             "start": new_start,
                             "lines": []
                         }
-                        hunk_start_index = i  # Lưu index của dòng bắt đầu hunk
+                        hunk_start_index = i
                     else:
                         current_hunk = None
                     hunk_lines = []
-                    relevant_lines = []
+
             elif current_hunk is not None:
                 hunk_lines.append(line)
-                if line.startswith(('+', '-', ' ')):
-                    relevant_lines.append(line)
 
-        if current_hunk:
-            # Lấy context xung quanh hunk
+        if current_hunk and hunk_start_index is not None:
             start_index = max(0, hunk_start_index - context_lines)
             end_index = min(len(lines), hunk_start_index + len(hunk_lines) + context_lines)
             context_hunk_lines = lines[start_index:end_index]
             return "\n".join(context_hunk_lines)
-        else:
-            return None
+
+        return None
 
     def _get_diff_hunk_for_line(self, file_path, line_number):
       """
