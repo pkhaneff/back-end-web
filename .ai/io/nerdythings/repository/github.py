@@ -50,7 +50,16 @@ class GitHub(Repository):
 
         if not diff_hunk:
             print(f"Không tìm thấy diff hunk cho file: {file_path}, line: {line}")
-            return  # Hoặc xử lý theo cách phù hợp, ví dụ raise RepositoryError
+            return
+
+        hunk_start_pattern = re.compile(r"@@ -(\d+),(\d+) \+(\d+),(\d+) @@")
+        first_line = diff_hunk.splitlines()[0]
+        match = hunk_start_pattern.match(first_line)
+        if match:
+            new_start = int(match.group(3)) 
+        else:
+            print("Không tìm thấy thông tin dòng bắt đầu trong diff hunk.")
+            return
 
         headers = self._get_base_headers()
 
@@ -58,8 +67,8 @@ class GitHub(Repository):
             "body": text,
             "commit_id": commit_id,
             "path": file_path,
-            "position": line,
-            "diff_hunk": diff_hunk  # Thêm diff_hunk vào body
+            "position": new_start, 
+            "diff_hunk": diff_hunk
         }
 
         response = requests.post(self.__url_add_comment, json=body, headers=headers)
@@ -82,7 +91,6 @@ class GitHub(Repository):
             raise RepositoryError(f"Error with general comment {response.status_code} : {response.text}")
 
     def get_latest_commit_id(self) -> str:
-        # Lấy danh sách tất cả các PR mở
         url = f"https://api.github.com/repos/{self.repo_owner}/{self.repo_name}/pulls?state=open"
         headers = self._get_base_headers()
 
@@ -92,7 +100,6 @@ class GitHub(Repository):
             if not pull_requests:
                 raise RepositoryError("No open pull requests found.")
 
-            # Tìm PR có nhánh head trùng với pull request đang làm việc
             matching_pr = next(
                 (pr for pr in pull_requests if pr["number"] == int(self.pull_number)),
                 None
