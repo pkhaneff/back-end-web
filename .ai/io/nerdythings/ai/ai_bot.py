@@ -42,6 +42,7 @@ class AiBot(ABC):
         """Xây dựng prompt cho AI, bao gồm code và diff."""
 
         diffs_with_line_numbers = "\n".join([f"[Line {d['line_number']}] {d['diff']}" for d in diffs])
+        print(f"DEBUG: diffs type: {type(diffs)}, value: {diffs}")
         return AiBot.__chat_gpt_ask_long.format(
             no_response=AiBot.__no_response,
             diffs=diffs_with_line_numbers,
