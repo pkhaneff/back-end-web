@@ -133,7 +133,7 @@ class GitHub(Repository):
         url = f"https://api.github.com/repos/{self.repo_owner}/{self.repo_name}/pulls/{self.pull_number}"
         headers = {
             "Authorization": f"token {self.token}",
-            "Accept": "application/vnd.github.v3.diff"  # Yêu cầu định dạng diff
+            "Accept": "application/vnd.github.v3.diff"
         }
         response = requests.get(url, headers=headers)
 
@@ -156,24 +156,20 @@ class GitHub(Repository):
 
         for line in lines:
             if line.startswith("diff --git"):
-                # Kiểm tra file path để bỏ qua các file không liên quan
                 if file_path not in line:
                     continue
-                current_hunk = None  # Reset hunk khi gặp file mới
             elif line.startswith("@@"):
-                # Bắt đầu một hunk mới
                 match = hunk_start_pattern.match(line)
                 if match:
                     old_start, old_length, new_start, new_length = map(int, match.groups())
                     if new_start <= line_number <= new_start + new_length:
-                        # hunk này chứa line_number
                         current_hunk = {
                             "start": new_start,
                             "lines": []
                         }
                     else:
-                        current_hunk = None  # Hunk không liên quan
-                    hunk_lines = []  # Reset dòng của hunk
+                        current_hunk = None
+                    hunk_lines = [] 
             elif current_hunk is not None:
                 hunk_lines.append(line)
 
