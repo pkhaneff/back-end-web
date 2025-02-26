@@ -1,4 +1,3 @@
-import bcryptjs from "bcryptjs"
 import User from "../models/user.model.js"
 import { errorHandler } from "../utils/error.js"
 
@@ -17,7 +16,7 @@ export const updateUser = async ( req, res, next ) => {
         req.body.password = bcryptjs.hashSync(req.body.password, 10)
     }
     if(req.body.username){
-        if(req.body.username.length < 7 || req.body.username.length > 20) {
+        if(req.body.username.length < 7  req.body.username.length > 20) {
             return next(errorHandler(400, 'Username must be between 7 and 20 characters'))
         }
         if(req.body.username.includes(' ')){
