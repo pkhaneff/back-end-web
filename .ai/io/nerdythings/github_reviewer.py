@@ -108,14 +108,10 @@ def process_file(file, ai, github, vars, reviewed_files):
     handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
 
 
-def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars):
+def handle_ai_response(response, github, file, file_diffs, vars):
     if not response or AiBot.is_no_issues_text(response):
         Log.print_green(f"No issues detected in {file}.")
-        reviewed_files.add(file)
         return
-
-    # Thay đổi ở đây: Không parse thành list suggestion trước
-    # mà để lại response nguyên bản, sau đó parse trong vòng lặp dưới
 
     existing_comments = github.get_comments()
     existing_comment_bodies = {comment['body'] for comment in existing_comments}
@@ -124,36 +120,45 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
 
     diff_lines = file_diffs.split("\n")
     line_number = None
+    diff_hunk = ""  # Biến để lưu diff_hunk hiện tại
 
-    # Không còn gom góp comment nữa, post từng comment một
     for diff in diff_lines:
         if diff.startswith("@@"):
             match = re.search(r"\+(\d+)", diff)
             if match:
                 line_number = int(match.group(1))
                 Log.print_yellow(f"Diff hunk start: {diff}, line_number: {line_number}")
+                diff_hunk = diff  # Bắt đầu một diff_hunk mới
             continue
 
         if diff.startswith("+") and line_number:
-            # Đây là dòng code mới, giờ ta sẽ post comment cho nó
-            # Phân tích response để lấy nội dung comment cho dòng này
+            # Thêm dòng hiện tại vào diff_hunk
+            diff_hunk += "\n" + diff
+            # Tính position trong diff_hunk
+            position = diff_hunk.count('\n')  # Số dòng trong diff_hunk
             comment_body = response.strip()
+
             if comment_body.strip() not in existing_comment_bodies:
                 Log.print_yellow(f"Posting comment to line {line_number}: {comment_body.strip()}")
                 try:
                     github.post_comment_to_line(
-                        text=comment_body.strip(),  # Post comment trực tiếp
+                        text=comment_body.strip(),
                         commit_id=latest_commit_id,
                         file_path=file,
-                        line=line_number
+                        line=line_number,
+                        position=position,
+                        diff_hunk=diff_hunk  # Gửi diff_hunk
                     )
                     Log.print_yellow(f"Posted review comment at line {line_number}: {comment_body.strip()}")
                 except RepositoryError as e:
                     Log.print_red(f"Failed to post review comment: {e}")
             else:
                 Log.print_yellow(f"Skipping comment: Comment already exists")
-
             line_number += 1
+        else:
+            # Nếu không phải là dòng bắt đầu bằng "+", hãy thêm vào diff_hunk hiện tại
+            if diff_hunk:
+                diff_hunk += "\n" + diff
 
 if __name__ == "__main__":
     main()

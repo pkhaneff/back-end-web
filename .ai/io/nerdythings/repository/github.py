@@ -43,32 +43,16 @@ class GitHub(Repository):
         else:
             raise RepositoryError(f"Error fetching comments {response.status_code}: {response.text}")
 
-    def post_comment_to_line(self, text: str, commit_id: str, file_path: str, line: int):
+    def post_comment_to_line(self, text: str, commit_id: str, file_path: str, line: int, position: int, diff_hunk: str):
         """Đăng comment lên một dòng cụ thể trong pull request."""
-
-        diff_hunk = self._get_diff_hunk_for_line(file_path, line)
-
-        if not diff_hunk:
-            print(f"Không tìm thấy diff hunk cho file: {file_path}, line: {line}")
-            return
-
-        hunk_start_pattern = re.compile(r"@@ -(\d+),(\d+) \+(\d+),(\d+) @@")
-        first_line = diff_hunk.splitlines()[0]
-        match = hunk_start_pattern.match(first_line)
-        if match:
-            new_start = int(match.group(3)) 
-        else:
-            print("Không tìm thấy thông tin dòng bắt đầu trong diff hunk.")
-            return
-
         headers = self._get_base_headers()
 
         body = {
             "body": text,
             "commit_id": commit_id,
             "path": file_path,
-            "position": new_start, 
-            "diff_hunk": diff_hunk
+            "position": position, # Thêm trường position
+            "diff_hunk": diff_hunk # Thêm trường diff_hunk
         }
 
         response = requests.post(self.__url_add_comment, json=body, headers=headers)
