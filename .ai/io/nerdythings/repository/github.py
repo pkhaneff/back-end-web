@@ -149,6 +149,8 @@ class GitHub(Repository):
         if not diff_text:
             return None
 
+        print("Full Diff Text:\n", diff_text) # In diff text
+
         hunk_start_pattern = re.compile(r"@@ -(\d+),(\d+) \+(\d+),(\d+) @@")
         lines = diff_text.splitlines()
         current_hunk = None
@@ -165,6 +167,8 @@ class GitHub(Repository):
                 match = hunk_start_pattern.match(line)
                 if match:
                     old_start, old_length, new_start, new_length = map(int, match.groups())
+                    print(f"Hunk: old_start={old_start}, old_length={old_length}, new_start={new_start}, new_length={new_length}, line_number={line_number}") # In biến
+
                     if new_start <= line_number <= new_start + new_length:
                         # hunk này chứa line_number
                         current_hunk = {

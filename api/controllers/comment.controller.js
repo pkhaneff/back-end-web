@@ -7,7 +7,7 @@ export const createcomment = async (req, res, next) => {
         if(userId !== req.user.id){
             return next(errorHandler(403, 'You are not allow to create this comment'))
         }
-        const = new Comment({
+        const newComment = new Comment({
             content,
             userId,
             postId
