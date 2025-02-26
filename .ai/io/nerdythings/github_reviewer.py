@@ -149,7 +149,7 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
                             file_path=file,
                             line=line_number
                         )
-                        Log.print_yellow(f"Posted review comment at line {line_number}: {suggestion.strip()}")
+                        Log.print_yellow(f"Posted review comment at line {line_number}: {suggestion.text.strip()}")
                     except RepositoryError as e:
                         Log.print_red(f"Failed to post review comment: {e}")
 

@@ -1,4 +1,4 @@
-import Post from '../models/post.model.js'
+import Post
 import { errorHandler} from '../utils/error.js'
 
 export const create = async (req, res, next) => {
