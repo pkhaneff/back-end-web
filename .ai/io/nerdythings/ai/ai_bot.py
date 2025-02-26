@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import re
-from ai.line_comment import LineComment
+from ai.line_comment import LineComment  # Đảm bảo import class LineComment
 
 class AiBot(ABC):
     
@@ -8,53 +8,39 @@ class AiBot(ABC):
     __problems = "errors, security issues, performance bottlenecks, or bad practices"
     __chat_gpt_ask_long = """
         You are an AI code reviewer with expertise in multiple programming languages.
-        Your goal is to analyze Git diffs and identify potential issues.
+        Your goal is to analyze Git diffs and identify potential issues, focusing **exclusively** on the lines that have been changed.
 
         **Review Scope:**
-        - Focus on meaningful structural changes, ignoring formatting or comments.
+        - **Strictly limited to the changes highlighted in the provided diffs.**  Do not analyze the surrounding code.
+        - Focus on meaningful structural changes within the diff, ignoring formatting or comments that are outside the diff.
         - Provide clear explanations and actionable suggestions.
         - Categorize issues by severity: **Warning, Error, Critical**.
-
-        **Review Guidelines:**
-        - **Syntax Errors**: Compilation/runtime failures.
-        - **Logical Errors**: Incorrect conditions, infinite loops, unexpected behavior.
 
         **Output Format:**
         Each issue should follow the following Markdown format, resembling a commit log:
         
-        **[{severity}] - [{type}] - {issue_description}**
-
-        **Code:**
-        diff
-        {code}
-
-        Suggested Fix (nếu có):
-        {suggested_fix}
-         Ví dụ:
-        ### ⚠️ [Warning] [Logical Error] - Incorrect function name used for saving newComment.
+        **[Line {line_number}] - [{severity}] - [{type}] - {issue_description}**
 
         **Code:**
         ```diff
-        - await newComment.saved()
-        + await newComment.save()
+        {code}
+        ```
 
-        **Suggested Fix:**
-        Sửa lại phương thức `.saved()` thành `.save()` để tránh lỗi.            
-                
-        **Note:**
-        *   `Code` and `Suggested Fix` are wrapped with ```diff to show code diffs and fixes.
-        *   Titles and instructions are formatted for readability.
+        **Suggested Fix (if applicable):**
+        ```diff
+        {suggested_fix}
+        ```
 
-        **Reason for modification:**
-        *   Removed complex Markdown like bullet points for easy copying.
-        *   Used simple titles to differentiate sections.
-        *   Kept code blocks to easily identify diffs and fixes.
+        **Important Notes:**
+        *   The `line_number` refers to the line number in the **modified file**, not the diff output.
+        *   `Code` and `Suggested Fix` are wrapped with ```diff to clearly show the code diffs and fixes.
+        *   The review **MUST** be based solely on the provided `diffs`. If there are no issues within the `diffs`, then respond with "{no_response}".
     """
 
     @staticmethod
     def get_context_lines(code, line_number, context=2):
         """
-        Lấy một số dòng xung quanh dòng thay đổi để cung cấp ngữ cảnh cho AI.
+        Lấy một số dòng xung quanh dòng thay đổi để cung cấp ngữ cảnh cho AI.  (Không còn dùng nữa, vì giờ chỉ tập trung vào diff.)
         """
         lines = code.split("\n")
         start = max(line_number - context - 1, 0) 
@@ -67,35 +53,12 @@ class AiBot(ABC):
 
     @staticmethod
     def build_ask_text(code, diffs) -> str:
-        if isinstance(diffs, list) and diffs:
-            line_number = diffs[0].get("line_number", "N/A")
-            severity = diffs[0].get("severity", "Warning")
-            issue_type = diffs[0].get("type", "General Issue") 
-            issue_description = diffs[0].get("issue_description", "No description")
-            suggested_fix = diffs[0].get("suggested_fix", "")
-        elif isinstance(diffs, dict):
-            line_number = diffs.get("line_number", "N/A")
-            severity = diffs.get("severity", "Warning")
-            issue_type = diffs.get("type", "General Issue") 
-            issue_description = diffs.get("issue_description", "No description")
-            suggested_fix = diffs.get("suggested_fix", "")
-        else:
-            line_number = "N/A"
-            severity = "Warning"
-            issue_type = "General Issue"
-            issue_description = "No description"
-            suggested_fix = ""
+        """Xây dựng prompt cho AI, bao gồm code và diff."""
 
         return AiBot.__chat_gpt_ask_long.format(
-            problems=AiBot.__problems,
             no_response=AiBot.__no_response,
             diffs=diffs,
-            code=code,
-            line_number=line_number,
-            severity=severity,
-            type=issue_type,
-            issue_description=issue_description,
-            suggested_fix=suggested_fix
+            code=code
         )
 
     @staticmethod
@@ -110,8 +73,8 @@ class AiBot(ABC):
             return []
 
         comments = []
-        # Tách các entry bằng dấu ###
-        entries = re.split(r"###", input.strip())
+        # Tách các entry bằng dấu xuống dòng kép và khoảng trắng thừa
+        entries = re.split(r"\n\s*\n", input.strip())
 
         for entry in entries:
             entry = entry.strip()
@@ -119,7 +82,7 @@ class AiBot(ABC):
                 continue
 
             # Tìm kiếm các thông tin cần thiết từ mỗi entry
-            match = re.match(r"\s*\[Line\s*(\d+)\s*\]\s*-\s*\[(Warning|Error|Critical)\]\s*-\s*\[(.*?)\]\s*-\s*(.*)", entry)
+            match = re.match(r"\*\*\[Line\s*(\d+)\s*\]\s*-\s*\[(Warning|Error|Critical)\]\s*-\s*\[(.*?)\]\s*-\s*(.*)\*\*", entry)
 
             if match:
                 line_number, severity, issue_type, description = match.groups()
@@ -137,15 +100,18 @@ class AiBot(ABC):
                 code_match = re.search(r"Code:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
                 code = code_match.group(1).strip() if code_match else ""
 
-                fix_match = re.search(r"Suggested Fix \(nếu có\):\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
+                fix_match = re.search(r"Suggested Fix \(if applicable\):\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
                 suggested_fix = fix_match.group(1).strip() if fix_match else ""
 
-                # Tạo comment với đầy đủ thông tin
-                comment_text = f"### [{severity}] [{issue_type}]\n\n{description.strip()}\n\n"
-                if code:
-                    comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
-                if suggested_fix:
-                    comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
+                # Tạo comment với đầy đủ thông tin (giữ nguyên format yêu cầu)
+                comment_text = f"""**[Line {line_number}] - [{severity}] - [{issue_type}] - {description.strip()}**
+
+                    **Code:**
+                    ```diff
+                    {code}
+                Suggested Fix (if applicable):
+                {suggested_fix}
+            ```"""
 
                 comments.append(LineComment(line=line_number, text=comment_text))
             else:

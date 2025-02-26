@@ -59,7 +59,7 @@ def update_pr_summary(changed_files, ai, github):
 
     if not file_contents:
         return
-    
+
     Log.print_yellow(f"File contents before processing: {file_contents}")
     full_context = {file: (content[:1000] if isinstance(content, str) else "") for file, content in zip(changed_files, file_contents)}
     new_summary = ai.ai_request_summary(file_changes=full_context)
@@ -106,6 +106,7 @@ def process_file(file, ai, github, vars, reviewed_files):
 
     handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
 
+
 def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars):
     if not response or AiBot.is_no_issues_text(response):
         Log.print_green(f"No issues detected in {file}.")
@@ -125,20 +126,20 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
     diff_lines = file_diffs.split("\n")
     line_number = None
 
-    # Duyệt qua từng dòng diff
     for diff in diff_lines:
         if diff.startswith("@@"):
             match = re.search(r"\+(\d+)", diff)
             if match:
                 line_number = int(match.group(1))
+                Log.print_yellow(f"Diff hunk start: {diff}, line_number: {line_number}")
             continue
 
         if diff.startswith("+") and line_number:
-            # Duyệt qua từng suggestion cho dòng này
             for suggestion in suggestions:
-                comment_body = f"- {suggestion['text'].strip()}"  # Corrected line
+                comment_body = f"- {suggestion['text'].strip()}"
 
                 if comment_body not in existing_comment_bodies:
+                    Log.print_yellow(f"Posting comment to line {line_number}: {comment_body}")
                     try:
                         github.post_comment_to_line(
                             text=comment_body,
@@ -146,19 +147,25 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
                             file_path=file,
                             line=line_number
                         )
-                        Log.print_yellow(f"Posted review comment at line {line_number}: {suggestion['text'].strip()}") # Corrected Log
+                        Log.print_yellow(f"Posted review comment at line {line_number}: {suggestion['text'].strip()}")
                     except RepositoryError as e:
                         Log.print_red(f"Failed to post review comment: {e}")
+                else:
+                     Log.print_yellow(f"Skipping comment: {comment_body} as it already exists")
 
-            line_number += 1
+            line_number += 1 
 
 def parse_ai_suggestions(response):
     if not response:
         return []
+
     suggestions = []
     for suggestion_text in response.split("\n\n"):
-        suggestions.append({"text": suggestion_text.strip()})
+        suggestion_text = suggestion_text.strip()
+        if suggestion_text: 
+            suggestions.append({"text": suggestion_text})
     return suggestions
+
 
 if __name__ == "__main__":
     main()
