@@ -142,20 +142,20 @@ class GitHub(Repository):
         else:
             raise RepositoryError(f"Error getting diff: {response.status_code}")
 
-    def _extract_diff_hunk_for_line(self, file_path, line_number):
-        """Trích xuất diff hunk chứa dòng cụ thể, chỉ giữ lại các dòng thay đổi."""
+    def _extract_diff_hunk_for_line(self, file_path, line_number, context_lines=3):
+        """Trích xuất diff hunk chứa dòng cụ thể, với context."""
 
         diff_text = self._get_pull_request_diff()
         if not diff_text:
             return None
 
-        hunk_start_pattern = re.compile(r"@@ -\d+,\d+ \+(\d+),(\d+) @@")
+        hunk_start_pattern = re.compile(r"@@ -(\d+),(\d+) \+(\d+),(\d+) @@")
         lines = diff_text.splitlines()
         current_hunk = None
         hunk_lines = []
         relevant_lines = []
 
-        for line in lines:
+        for i, line in enumerate(lines):
             if line.startswith("diff --git"):
                 if file_path not in line:
                     continue
@@ -168,6 +168,7 @@ class GitHub(Repository):
                             "start": new_start,
                             "lines": []
                         }
+                        hunk_start_index = i  # Lưu index của dòng bắt đầu hunk
                     else:
                         current_hunk = None
                     hunk_lines = []
@@ -178,7 +179,11 @@ class GitHub(Repository):
                     relevant_lines.append(line)
 
         if current_hunk:
-            return "\n".join(relevant_lines)
+            # Lấy context xung quanh hunk
+            start_index = max(0, hunk_start_index - context_lines)
+            end_index = min(len(lines), hunk_start_index + len(hunk_lines) + context_lines)
+            context_hunk_lines = lines[start_index:end_index]
+            return "\n".join(context_hunk_lines)
         else:
             return None
 
