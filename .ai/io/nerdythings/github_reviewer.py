@@ -104,7 +104,6 @@ def process_file(file, ai, github, vars, reviewed_files):
     Log.print_green(f"AI analyzing changes in {file}...")
     response = ai.ai_request_diffs(code=file_content, diffs=file_diffs)
 
-    # Truyền diff_lines cho hàm handle_ai_response
     handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
 
 def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars):
@@ -139,7 +138,9 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
                         text=comment_body.strip(), 
                         commit_id=latest_commit_id,
                         file_path=file,
-                        line=line_number
+                        line=line_number,
+                        position=line_number,  
+                        diff_hunk=diff_hunk
                     )
                     Log.print_yellow(f"Posted review comment at line {line_number}: {comment_body.strip()}")
                 except RepositoryError as e:
