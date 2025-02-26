@@ -1,6 +1,6 @@
 import express from 'express'
 import { verifyToken } from '../utils/verifyUser.js'
-import {importdata, getdata, customPrompt} from "../controllers/chatbot.controller.js"
+import {importdata, getdata, customPrompt, getprompt} from "../controllers/chatbot.controller.js"
 
 const router = express.Router()
 

@@ -106,7 +106,7 @@ def process_file(file, ai, github, vars, reviewed_files):
 
     handle_ai_response(response, github, file, file_diffs, reviewed_files)
 
-def handle_ai_response(response, github, file, file_diffs, reviewed_files):
+def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars):
     if not response or AiBot.is_no_issues_text(response):
         Log.print_green(f"No issues detected in {file}.")
         reviewed_files.add(file)
@@ -120,40 +120,36 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files):
     existing_comments = github.get_comments()
     existing_comment_bodies = {comment['body'] for comment in existing_comments}
 
-    commit_id = github.get_latest_commit_id()
+    latest_commit_id = github.get_latest_commit_id()
 
-    for suggestion in suggestions:
-        comment_body = suggestion.strip()
+    diff_lines = file_diffs.split("\n")
+    line_number = None  
 
-        if comment_body in existing_comment_bodies:
-            Log.print_green(f"Skipping duplicate comment for {file}.")
+    for diff in diff_lines:
+        if diff.startswith("@@"):
+            match = re.search(r"\+(\d+)", diff)
+            if match:
+                line_number = int(match.group(1))
             continue
+        
+        if diff.startswith("+") and line_number:
+            if suggestions:
+                suggestion = suggestions.pop(0)
+                comment_body = f"- {suggestion.strip()}"
 
-        # Nếu AI có thể xác định vị trí lỗi trong file, ta có thể post vào dòng cụ thể
-        line_number = extract_line_number_from_suggestion(suggestion, file_diffs)
+                if comment_body not in existing_comment_bodies:
+                    try:
+                        github.post_comment_to_line(
+                            text=comment_body,
+                            commit_id=latest_commit_id,
+                            file_path=file,
+                            line=line_number
+                        )
+                        Log.print_yellow(f"Posted review comment at line {line_number}: {suggestion.strip()}")
+                    except RepositoryError as e:
+                        Log.print_red(f"Failed to post review comment: {e}")
 
-        try:
-            if line_number:
-                github.post_comment_to_line(comment_body, commit_id, file, line_number)
-                Log.print_yellow(f"Posted line comment on {file}:{line_number}")
-            else:
-                github.post_comment_general(comment_body, commit_id)
-                Log.print_yellow(f"Posted general comment: {comment_body}")
-        except RepositoryError as e:
-            Log.print_red(f"Failed to post review comment: {e}")
-    
-    reviewed_files.add(file)
-
-def extract_line_number_from_suggestion(suggestion, file_diffs):
-    """
-    Tìm số dòng lỗi trong suggestion từ AI, nếu có thể.
-    """
-    for diff in file_diffs:
-        match = re.search(r"line (\d+)", suggestion, re.IGNORECASE)
-        if match:
-            return int(match.group(1))
-    return None
-
+            line_number += 1 
 
 def parse_ai_suggestions(response):
     return response.split("\n\n") if response else []
