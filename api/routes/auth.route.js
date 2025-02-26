@@ -1,4 +1,4 @@
-import express from 'express'
+import express 
 import { google, signin, signup } from '../controllers/auth.controller.js'
 
 const router = express.Router()
