@@ -18,7 +18,7 @@ const corsOptions = {
             callback(new Error('Not allowed by CORS'));
         }
     },
-    methods ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     credentials: true, 
 };
@@ -37,7 +37,7 @@ app.listen(process.env.PORT, () => {
     console.log('Server is running !')
 })
 
-app.use((err, req, next) => {
+app.use((err, req,res, next) => {
     const statusCode = err.statusCode || 500;
     const message = err.message || 'Internal Server Error'
     console.log("Err details: ", err)

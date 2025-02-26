@@ -15,10 +15,6 @@ def main():
     vars = EnvVars()
     vars.check_vars()
 
-    if os.getenv("GITHUB_EVENT_NAME") != "pull_request" or not vars.pull_number:
-        Log.print_red("This action only runs on pull request events.")
-        return
-
     github = GitHub(vars.token, vars.owner, vars.repo, vars.pull_number)
     ai = ChatGPT(vars.chat_gpt_token, vars.chat_gpt_model)
 
@@ -67,7 +63,6 @@ def update_pr_summary(changed_files, ai, github):
     Log.print_yellow(f"File contents before processing: {file_contents}")
     full_context = {file: (content[:1000] if isinstance(content, str) else "") for file, content in zip(changed_files, file_contents)}
     new_summary = ai.ai_request_summary(file_changes=full_context)
-
 
     pr_data = github.get_pull_request()
     current_body = pr_data.get("body") or ""
