@@ -121,7 +121,7 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
     existing_comment_bodies = {comment['body'] for comment in existing_comments}
 
     latest_commit_id = github.get_latest_commit_id()
-    pr_diff = github.get_pull_request_diff()
+    pr_diff = github._get_pull_request_diff()
 
     diff_hunks = Git.parse_diff_hunks(pr_diff, file)
 
