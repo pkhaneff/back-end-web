@@ -4,22 +4,26 @@ import re
 
 
 class GitHub(Repository):
-
     def __init__(self, token: str, repo_owner: str, repo_name: str, pull_number: str = None):
         self.token = token
         self.repo_owner = repo_owner
         self.repo_name = repo_name
         self.pull_number = pull_number
         self.__header_accept_json = {"Authorization": f"token {token}",
-                                      "Accept": "application/vnd.github+json"}  # Bỏ header thừa
-        self.__header_authorization = {"Accept": "application/vnd.github.v3+json"}
+                                      "Accept": "application/vnd.github+json"}
         self.__url_add_comment = f"https://api.github.com/repos/{repo_owner}/{repo_name}/pulls/{pull_number}/comments"
         self.__url_add_issue = f"https://api.github.com/repos/{repo_owner}/{repo_name}/issues/{pull_number}/comments"
+
+    def _get_base_headers(self):
+        headers = {"Accept": "application/vnd.github+json"}
+        if self.token:
+            headers["Authorization"] = f"token {self.token}"
+        return headers
 
     def update_comment(self, comment_id: str, new_body: str):
         """Cập nhật một comment trên PR bằng API GitHub."""
         url = f"https://api.github.com/repos/{self.repo_owner}/{self.repo_name}/issues/comments/{comment_id}"
-        headers = self.__header_accept_json | self.__header_authorization
+        headers = self._get_base_headers()
         body = {"body": new_body}
 
         response = requests.patch(url, json=body, headers=headers)
@@ -31,7 +35,7 @@ class GitHub(Repository):
 
     def get_comments(self):
         """Lấy tất cả các comment trên PR."""
-        headers = self.__header_accept_json | self.__header_authorization
+        headers = self._get_base_headers()
         response = requests.get(self.__url_add_issue, headers=headers)
 
         if response.status_code == 200:
@@ -48,7 +52,7 @@ class GitHub(Repository):
             print(f"Không tìm thấy diff hunk cho file: {file_path}, line: {line}")
             return  # Hoặc xử lý theo cách phù hợp, ví dụ raise RepositoryError
 
-        headers = self.__header_accept_json | self.__header_authorization
+        headers = self._get_base_headers()
 
         body = {
             "body": text,
@@ -66,7 +70,7 @@ class GitHub(Repository):
             raise RepositoryError(f"Error with line comment {response.status_code} : {response.text}")
 
     def post_comment_general(self, text, commit_id=None):
-        headers = self.__header_accept_json | self.__header_authorization
+        headers = self._get_base_headers()
         body = {"body": text}
         if commit_id:
             body["commit_id"] = commit_id
@@ -80,7 +84,7 @@ class GitHub(Repository):
     def get_latest_commit_id(self) -> str:
         # Lấy danh sách tất cả các PR mở
         url = f"https://api.github.com/repos/{self.repo_owner}/{self.repo_name}/pulls?state=open"
-        headers = self.__header_accept_json | self.__header_authorization
+        headers = self._get_base_headers()
 
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
@@ -117,13 +121,13 @@ class GitHub(Repository):
 
     def get_pull_request(self):
         url = f"https://api.github.com/repos/{self.repo_owner}/{self.repo_name}/pulls/{self.pull_number}"
-        headers = self.__header_accept_json | self.__header_authorization
+        headers = self._get_base_headers()
         response = requests.get(url, headers=headers)
         return response.json()
 
     def update_pull_request(self, new_body):
         url = f"https://api.github.com/repos/{self.repo_owner}/{self.repo_name}/pulls/{self.pull_number}"
-        headers = self.__header_accept_json | self.__header_authorization
+        headers = self._get_base_headers()
         data = {"body": new_body}
         response = requests.patch(url, json=data, headers=headers)
         return response.json()
@@ -143,8 +147,6 @@ class GitHub(Repository):
             raise RepositoryError(f"Error getting diff: {response.status_code}")
 
     def _extract_diff_hunk_for_line(self, file_path, line_number):
-        """Trích xuất diff hunk chứa dòng cụ thể."""
-
         diff_text = self._get_pull_request_diff()
         if not diff_text:
             return None
@@ -154,37 +156,28 @@ class GitHub(Repository):
         hunk_start_pattern = re.compile(r"@@ -(\d+),(\d+) \+(\d+),(\d+) @@")
         lines = diff_text.splitlines()
         current_hunk = None
-        hunk_lines = []
 
         for line in lines:
-            if line.startswith("diff --git"):
-                # Kiểm tra file path để bỏ qua các file không liên quan
-                if file_path not in line:
-                    continue
-                current_hunk = None  # Reset hunk khi gặp file mới
-            elif line.startswith("@@"):
-                # Bắt đầu một hunk mới
-                match = hunk_start_pattern.match(line)
-                if match:
-                    old_start, old_length, new_start, new_length = map(int, match.groups())
-                    print(f"Hunk: old_start={old_start}, old_length={old_length}, new_start={new_start}, new_length={new_length}, line_number={line_number}") # In biến
+            match = hunk_start_pattern.match(line)
+            if match:
+                old_start, old_length, new_start, new_length = map(int, match.groups())
+                print(f"Hunk: old_start={old_start}, old_length={old_length}, new_start={new_start}, new_length={new_length}, line_number={line_number}") # In biến
 
-                    if new_start <= line_number <= new_start + new_length:
-                        # hunk này chứa line_number
-                        current_hunk = {
-                            "start": new_start,
-                            "lines": []
-                        }
-                    else:
-                        current_hunk = None  # Hunk không liên quan
-                    hunk_lines = []  # Reset dòng của hunk
-            elif current_hunk is not None:
-                hunk_lines.append(line)
+                if new_start <= line_number <= new_start + new_length:
+                    # hunk này chứa line_number
+                    current_hunk = {
+                        "old_start": old_start,
+                        "old_length": old_length,
+                        "new_start": new_start,
+                        "new_length": new_length,
+                        "lines": [],
+                    }
+            if current_hunk is not None:
+                current_hunk["lines"].append(line)
 
         if current_hunk:
-            return "\n".join(hunk_lines)
-        else:
-            return None
+            return "\n".join(current_hunk["lines"])
+        return None
 
     def _get_diff_hunk_for_line(self, file_path, line_number):
       """
