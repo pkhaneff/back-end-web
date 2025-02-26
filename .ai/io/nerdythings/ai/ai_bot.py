@@ -26,7 +26,7 @@ class AiBot(ABC):
         ### [Line {line_number}] - [{severity}] - [{type}] - {issue_description}
 
         **Code:**
-        ```diff
+        diff
         {code}
         ```
 
