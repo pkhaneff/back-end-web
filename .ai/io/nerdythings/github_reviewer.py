@@ -139,7 +139,7 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
         if diff.startswith("+") and line_number:
             if suggestions:
                 suggestion = suggestions.pop(0)
-                comment_body = f"- {suggestion.strip()}"
+                comment_body = f"- {suggestion.text.strip()}"
 
                 if comment_body not in existing_comment_bodies:
                     try:
