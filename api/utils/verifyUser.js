@@ -11,7 +11,7 @@ export const verifyToken = (req, res, next) => {
             console.error('JWT verification error:', err);
             return next(errorHandler(401, 'Unauthorized'))
         } 
-        req.user = 
+        req.user = user
         next()
     })
 }
