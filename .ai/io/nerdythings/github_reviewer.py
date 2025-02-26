@@ -104,7 +104,7 @@ def process_file(file, ai, github, vars, reviewed_files):
     Log.print_green(f"AI analyzing changes in {file}...")
     response = ai.ai_request_diffs(code=file_content, diffs=file_diffs)
 
-    handle_ai_response(response, github, file, file_diffs, reviewed_files)
+    handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
 
 def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars):
     if not response or AiBot.is_no_issues_text(response):
