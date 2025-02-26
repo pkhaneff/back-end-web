@@ -136,7 +136,7 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
         if diff.startswith("+") and line_number:
             # Duyệt qua từng suggestion cho dòng này
             for suggestion in suggestions:
-                comment_body = f"- {suggestion.text.strip()}"
+                comment_body = f"- {suggestion['text'].strip()}"  # Corrected line
 
                 if comment_body not in existing_comment_bodies:
                     try:
@@ -146,7 +146,7 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
                             file_path=file,
                             line=line_number
                         )
-                        Log.print_yellow(f"Posted review comment at line {line_number}: {suggestion.text.strip()}")
+                        Log.print_yellow(f"Posted review comment at line {line_number}: {suggestion['text'].strip()}") # Corrected Log
                     except RepositoryError as e:
                         Log.print_red(f"Failed to post review comment: {e}")
 
