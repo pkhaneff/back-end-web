@@ -27,7 +27,6 @@ def main():
         Log.print_red("No changes detected.")
         return
 
-    # Loại bỏ các file trong các thư mục bị loại trừ
     changed_files = [
         file for file in changed_files
         if not any(file.startswith(excluded) for excluded in EXCLUDED_FOLDERS)
@@ -46,9 +45,6 @@ def main():
         process_file(file, ai, github, vars, reviewed_files)
 
 def update_pr_summary(changed_files, ai, github):
-    """
-    Cập nhật mô tả của PR thay vì đăng comment nếu đã có comment của owner.
-    """
     Log.print_green("Updating PR description...")
 
     file_contents = []
@@ -67,7 +63,6 @@ def update_pr_summary(changed_files, ai, github):
     Log.print_yellow(f"File contents before processing: {file_contents}")
     full_context = {file: (content[:1000] if isinstance(content, str) else "") for file, content in zip(changed_files, file_contents)}
     new_summary = ai.ai_request_summary(file_changes=full_context)
-
 
     pr_data = github.get_pull_request()
     current_body = pr_data.get("body") or ""
@@ -122,28 +117,21 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files):
         Log.print_red(f"Failed to parse AI suggestions for {file}.")
         return
 
-    comment_body = f"### AI Review for {file}\n\n" + "\n".join(f"- {s.strip()}" for s in suggestions)
+    existing_comments = github.get_comments()
+    existing_comment_bodies = {comment['body'] for comment in existing_comments}
 
-    try:
-        existing_comments = github.get_comments()
-        owner_has_summary_comment = any(
-            PR_SUMMARY_COMMENT_IDENTIFIER in comment['body'] and comment['user']['type'] == 'Owner'
-            for comment in existing_comments
-        )
+    for suggestion in suggestions:
+        comment_body = f"- {suggestion.strip()}"
 
-        if owner_has_summary_comment:
-            Log.print_green("Skipping PR summary comment as the owner has already provided one.")
-            return
+        if comment_body in existing_comment_bodies:
+            Log.print_green(f"Skipping duplicate comment for {file}.")
+            continue
 
-        comment_already_posted = any(comment['body'] == comment_body for comment in existing_comments)
-        if not comment_already_posted:
-            github.post_comment_general(comment_body)
-            Log.print_yellow(f"Posted review for {file}")
-        else:
-            Log.print_green(f"Review for {file} already posted, skipping.")
-
-    except RepositoryError as e:
-        Log.print_red(f"Failed to post review for {file}: {e}")
+        try:
+            github.post_comment(file, comment_body)
+            Log.print_yellow(f"Posted review comment: {suggestion.strip()}")
+        except RepositoryError as e:
+            Log.print_red(f"Failed to post review comment: {e}")
     
     reviewed_files.add(file)
 

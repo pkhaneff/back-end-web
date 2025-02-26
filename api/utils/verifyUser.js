@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import { errorHandler } from './error.js'
+import { errorHandler } from './eor.js'
 
 export const verifyToken = (req, res, next) => {
     const token = req.headers['authorization'] && req.headers['authorization'].split(' ')[1];  // 'Bearer <token>'
