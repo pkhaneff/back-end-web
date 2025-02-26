@@ -113,50 +113,45 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
         reviewed_files.add(file)
         return
 
-    suggestions = parse_ai_suggestions(response)
-    if not suggestions:
-        Log.print_red(f"Failed to parse AI suggestions for {file}.")
-        return
-
     existing_comments = github.get_comments()
     existing_comment_bodies = {comment['body'] for comment in existing_comments}
 
     latest_commit_id = github.get_latest_commit_id()
 
     diff_lines = file_diffs.split("\n")
-    line_number = None
     diff_hunk = None
+    line_number = None
 
     for diff in diff_lines:
         if diff.startswith("@@"):
-            diff_hunk = diff  # Cập nhật diff_hunk mới
+            diff_hunk = diff
             match = re.search(r"\+(\d+)", diff)
             if match:
                 line_number = int(match.group(1))
                 Log.print_yellow(f"New diff hunk: {diff_hunk}, starting at line {line_number}")
-            continue
 
-        if diff.startswith("+") and line_number:
-            for suggestion in suggestions:
-                comment_body = f"- {suggestion['text'].strip()}"
+                hunk_suggestions = parse_ai_suggestions(response)
 
-                # Kiểm tra comment đã tồn tại hay chưa
+                comment_body = f"**Diff Hunk:**\n{diff_hunk}\n\n"
+                for suggestion in hunk_suggestions:
+                    comment_body += f"- {suggestion['text'].strip()}\n"
+
                 if comment_body.strip() not in existing_comment_bodies:
-                    Log.print_yellow(f"Posting comment to line {line_number}: {comment_body.strip()}")
+                    Log.print_yellow(f"Posting comment for hunk starting at line {line_number}: {comment_body.strip()}")
                     try:
                         github.post_comment_to_line(
-                            text=comment_body.strip(),  # Post comment
+                            text=comment_body.strip(),
                             commit_id=latest_commit_id,
                             file_path=file,
                             line=line_number
                         )
-                        Log.print_yellow(f"Posted review comment at line {line_number}: {comment_body.strip()}")
+                        Log.print_yellow(f"Posted review comment for hunk starting at line {line_number}: {comment_body.strip()}")
                     except RepositoryError as e:
                         Log.print_red(f"Failed to post review comment: {e}")
                 else:
                     Log.print_yellow(f"Skipping comment: Comment already exists")
 
-            line_number += 1
+            continue
 
 def parse_ai_suggestions(response):
     if not response:
