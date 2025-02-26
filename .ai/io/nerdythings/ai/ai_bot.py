@@ -38,34 +38,28 @@ class AiBot(ABC):
     """
 
     @staticmethod
+    def get_context_lines(code, line_number, context=2):
+        """
+        Lấy một số dòng xung quanh dòng thay đổi để cung cấp ngữ cảnh cho AI.  (Không còn dùng nữa, vì giờ chỉ tập trung vào diff.)
+        """
+        lines = code.split("\n")
+        start = max(line_number - context - 1, 0) 
+        end = min(line_number + context, len(lines))
+        return "\n".join(lines[start:end])
+
+    @abstractmethod
+    def ai_request_diffs(self, code, diffs) -> str:
+        pass
+
+    @staticmethod
     def build_ask_text(code, diffs) -> str:
         """Xây dựng prompt cho AI, bao gồm code và diff."""
-        
-        if isinstance(diffs, str):
-            print("DEBUG: `diffs` is a string, attempting to parse...")
-            try:
-                import json
-                diffs = json.loads(diffs)
-                if not isinstance(diffs, list):
-                    raise ValueError("Parsed `diffs` is not a list")
-            except Exception as e:
-                print(f"ERROR: Failed to parse `diffs` as JSON list - {e}")
-                return "ERROR: Invalid diff format"
-
-        if not isinstance(diffs, list):
-            print("ERROR: `diffs` is not a list")
-            return "ERROR: Invalid diff format"
-
-        diffs_with_line_numbers = "\n".join([
-            f"[Line {d.get('line_number', '?')}] {d.get('diff', '')}" for d in diffs
-        ])
 
         return AiBot.__chat_gpt_ask_long.format(
             no_response=AiBot.__no_response,
-            diffs=diffs_with_line_numbers,
-            code=code
+            diffs=diffs,
+            code=code,
         )
-
 
     @staticmethod
     def is_no_issues_text(source: str) -> bool:
@@ -74,19 +68,12 @@ class AiBot(ABC):
         return source_no_spaces.startswith(target)
     
     @staticmethod
-    def estimate_line_number_from_diffs(diffs):
-        """Cố gắng lấy line_number từ diff nếu bị thiếu."""
-        match = re.search(r"@@ -\d+,\d+ \+(\d+),\d+ @@", diffs)
-        if match:
-            return int(match.group(1))
-        return None
-
-    @staticmethod
-    def split_ai_response(input, diffs, total_lines_in_code) -> list[LineComment]:
+    def split_ai_response(input, total_lines_in_code) -> list[LineComment]:
         if not input:
             return []
 
         comments = []
+        # Tách các entry bằng dấu xuống dòng kép và khoảng trắng thừa
         entries = re.split(r"\n\s*\n", input.strip())
 
         for entry in entries:
@@ -94,27 +81,29 @@ class AiBot(ABC):
             if not entry:
                 continue
 
+            # Tìm kiếm các thông tin cần thiết từ mỗi entry
             match = re.match(r"\*\*\[Line\s*(\d+)\s*\]\s*-\s*\[(Warning|Error|Critical)\]\s*-\s*\[(.*?)\]\s*-\s*(.*)\*\*", entry)
 
             if match:
                 line_number, severity, issue_type, description = match.groups()
                 try:
                     line_number = int(line_number)
-                    if line_number < 1 or line_number > total_lines_in_code:
-                        raise ValueError(f"Invalid line number: {line_number}")
                 except ValueError:
-                    print(f"Warning: Could not determine line number, attempting fallback...")
-                    line_number = AiBot.estimate_line_number_from_diffs(diffs)
-                    if not line_number:
-                        print(f"Error: Could not extract a valid line number, skipping comment.")
-                        continue  # Bỏ qua nếu không có số dòng chính xác
+                    print(f"Warning: Could not parse line number: {line_number}")
+                    continue  # Bỏ qua entry nếu không parse được line number
+
+                if line_number < 1 or line_number > total_lines_in_code:
+                    print(f"Warning: Line number out of range: {line_number}")
+                    continue
                 
+                # Tìm kiếm code và suggested fix
                 code_match = re.search(r"Code:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
                 code = code_match.group(1).strip() if code_match else ""
 
                 fix_match = re.search(r"Suggested Fix \(if applicable\):\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
                 suggested_fix = fix_match.group(1).strip() if fix_match else ""
 
+                # Tạo comment với đầy đủ thông tin (giữ nguyên format yêu cầu)
                 comment_text = f"""**[Line {line_number}] - [{severity}] - [{issue_type}] - {description.strip()}**
 
                     **Code:**
@@ -126,6 +115,7 @@ class AiBot(ABC):
 
                 comments.append(LineComment(line=line_number, text=comment_text))
             else:
+                # Nếu không khớp format chuẩn, coi như là 1 comment tự do
                 comments.append(LineComment(line=0, text=entry))
 
         return comments
