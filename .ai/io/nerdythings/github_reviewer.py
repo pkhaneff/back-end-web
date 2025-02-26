@@ -59,7 +59,7 @@ def update_pr_summary(changed_files, ai, github):
 
     if not file_contents:
         return
-    
+
     Log.print_yellow(f"File contents before processing: {file_contents}")
     full_context = {file: (content[:1000] if isinstance(content, str) else "") for file, content in zip(changed_files, file_contents)}
     new_summary = ai.ai_request_summary(file_changes=full_context)
@@ -106,6 +106,7 @@ def process_file(file, ai, github, vars, reviewed_files):
 
     handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
 
+
 def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars):
     if not response or AiBot.is_no_issues_text(response):
         Log.print_green(f"No issues detected in {file}.")
@@ -149,16 +150,22 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
                         Log.print_yellow(f"Posted review comment at line {line_number}: {suggestion['text'].strip()}")
                     except RepositoryError as e:
                         Log.print_red(f"Failed to post review comment: {e}")
+                else:
+                     Log.print_yellow(f"Skipping comment: {comment_body} as it already exists")
 
-            line_number += 1
+            line_number += 1 
 
 def parse_ai_suggestions(response):
     if not response:
         return []
+
     suggestions = []
     for suggestion_text in response.split("\n\n"):
-        suggestions.append({"text": suggestion_text.strip()})
+        suggestion_text = suggestion_text.strip()
+        if suggestion_text: 
+            suggestions.append({"text": suggestion_text})
     return suggestions
+
 
 if __name__ == "__main__":
     main()
