@@ -105,8 +105,7 @@ def process_file(file, ai, github, vars, reviewed_files):
     response = ai.ai_request_diffs(code=file_content, diffs=file_diffs)
 
     # Truyền diff_lines cho hàm handle_ai_response
-    handle_ai_response(response, github, file, file_diffs, vars)
-
+    handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
 
 def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars):
     if not response or AiBot.is_no_issues_text(response):
