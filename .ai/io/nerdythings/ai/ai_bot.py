@@ -24,7 +24,7 @@ class AiBot(ABC):
 
         **Output Format:**
         Each issue should follow the following Markdown format, resembling a commit log:
-        
+
         **[Line {line_number}] - [{severity}] - [{type}] - {issue_description}**
 
         **Code:**
@@ -35,20 +35,6 @@ class AiBot(ABC):
         **Suggested Fix (if applicable):**
         ```diff
         {suggested_fix}
-        ```
-
-        **Example:**
-        ### [Line 123] - [Warning] - [Logical Error] - Incorrect function name used for saving newComment.
-
-        **Code:**
-        ```diff
-        - await newComment.saved()
-        + await newComment.save()
-        ```
-
-        **Suggested Fix:**
-        ```diff
-        Sửa lại phương thức `.saved()` thành `.save()` để tránh lỗi.
         ```
 
         **Important Notes:**
@@ -91,6 +77,7 @@ class AiBot(ABC):
             issue_type = "General Issue"
             issue_description = "Potential issue in the changed code."
             suggested_fix = ""
+            code_to_review = diffs
         else:  # Nếu diffs là một list hoặc dict (cách cũ)
             # Cảnh báo: Cách này có thể không chính xác nếu bạn muốn *chỉ* phân tích diff.
             # Hãy cân nhắc việc chuyển đổi diffs thành chuỗi diff thống nhất trước khi gọi hàm này.
@@ -99,11 +86,12 @@ class AiBot(ABC):
             issue_type = diffs[0].get("type", "General Issue") if isinstance(diffs, list) else diffs.get("type", "General Issue")
             issue_description = diffs[0].get("issue_description", "No description") if isinstance(diffs, list) else diffs.get("issue_description", "No description")
             suggested_fix = diffs[0].get("suggested_fix", "") if isinstance(diffs, list) else diffs.get("suggested_fix", "")
+            code_to_review = diffs[0].get("code", "") if isinstance(diffs, list) else diffs.get("code", "")
 
         return AiBot.__chat_gpt_ask_long.format(
             problems=AiBot.__problems,
             no_response=AiBot.__no_response,
-            diffs=diffs,
+            diffs=code_to_review,  # Gửi code_to_review thay vì diffs chung
             code=code,
             line_number=line_number,
             severity=severity,
@@ -155,7 +143,7 @@ class AiBot(ABC):
                 suggested_fix = fix_match.group(1).strip() if fix_match else ""
 
                 # Tạo comment với đầy đủ thông tin
-                comment_text = f"### [{severity}] [{issue_type}]\n\n{description.strip()}\n\n"
+                comment_text = f"**[Line {line_number}] - [{severity}] - [{issue_type}] - {description.strip()}**\n\n"
                 if code:
                     comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
                 if suggested_fix:
