@@ -131,12 +131,10 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
 
     for diff in diff_lines:
         if diff.startswith("@@"):
-            diff_hunk = diff  # Cập nhật diff_hunk mới
-            comments_for_line.clear()  # Reset danh sách comment theo dòng khi gặp @@ mới
             match = re.search(r"\+(\d+)", diff)
             if match:
                 line_number = int(match.group(1))
-                Log.print_yellow(f"New diff hunk: {diff_hunk}, starting at line {line_number}")
+                Log.print_yellow(f"New diff hunk: {diff}, starting at line {line_number}")
             continue
 
         if diff.startswith("+") and line_number:
@@ -165,15 +163,14 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
                     text=combined_comment_body.strip(),  # Post comment tổng hợp
                     commit_id=latest_commit_id,
                     file_path=file,
-                    line=line_number
+                    line=line_number # Use line parameter for creating new comments
                 )
                 Log.print_yellow(f"Posted review comment at line {line_number}: {combined_comment_body.strip()}")
             except RepositoryError as e:
                 Log.print_red(f"Failed to post review comment: {e}")
         else:
             Log.print_yellow(f"Skipping comment: Combined comment already exists")
-
-
+            
 def parse_ai_suggestions(response):
     if not response:
         return []
