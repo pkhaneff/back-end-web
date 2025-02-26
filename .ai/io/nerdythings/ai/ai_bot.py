@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import re
-from ai.line_comment import LineComment
+from ai.line_comment import LineComment  # Đảm bảo import class LineComment
 
 class AiBot(ABC):
     
@@ -8,53 +8,60 @@ class AiBot(ABC):
     __problems = "errors, security issues, performance bottlenecks, or bad practices"
     __chat_gpt_ask_long = """
         You are an AI code reviewer with expertise in multiple programming languages.
-        Your goal is to analyze Git diffs and identify potential issues.
+        Your goal is to analyze Git diffs and identify potential issues, focusing **exclusively** on the lines that have been changed.
 
         **Review Scope:**
-        - Focus on meaningful structural changes, ignoring formatting or comments.
+        - **Strictly limited to the changes highlighted in the provided diffs.**  Do not analyze the surrounding code.
+        - Focus on meaningful structural changes within the diff, ignoring formatting or comments that are outside the diff.
         - Provide clear explanations and actionable suggestions.
         - Categorize issues by severity: **Warning, Error, Critical**.
 
         **Review Guidelines:**
-        - **Syntax Errors**: Compilation/runtime failures.
-        - **Logical Errors**: Incorrect conditions, infinite loops, unexpected behavior.
+        - **Syntax Errors**: Compilation/runtime failures introduced by the change.
+        - **Logical Errors**: Incorrect conditions, infinite loops, unexpected behavior caused by the change.
+        - **Security Vulnerabilities**: Security problems directly caused by the change.
+        - **Performance Bottlenecks**: Performance degradation as a result of the change.
 
         **Output Format:**
         Each issue should follow the following Markdown format, resembling a commit log:
         
-        **[{severity}] - [{type}] - {issue_description}**
+        **[Line {line_number}] - [{severity}] - [{type}] - {issue_description}**
 
         **Code:**
-        diff
+        ```diff
         {code}
+        ```
 
-        Suggested Fix (nếu có):
+        **Suggested Fix (if applicable):**
+        ```diff
         {suggested_fix}
-         Ví dụ:
-        ### ⚠️ [Warning] [Logical Error] - Incorrect function name used for saving newComment.
+        ```
+
+        **Example:**
+        ### [Line 123] - [Warning] - [Logical Error] - Incorrect function name used for saving newComment.
 
         **Code:**
         ```diff
         - await newComment.saved()
         + await newComment.save()
+        ```
 
         **Suggested Fix:**
-        Sửa lại phương thức `.saved()` thành `.save()` để tránh lỗi.            
-                
-        **Note:**
-        *   `Code` and `Suggested Fix` are wrapped with ```diff to show code diffs and fixes.
-        *   Titles and instructions are formatted for readability.
+        ```diff
+        Sửa lại phương thức `.saved()` thành `.save()` để tránh lỗi.
+        ```
 
-        **Reason for modification:**
-        *   Removed complex Markdown like bullet points for easy copying.
-        *   Used simple titles to differentiate sections.
-        *   Kept code blocks to easily identify diffs and fixes.
+        **Important Notes:**
+        *   The `line_number` refers to the line number in the **modified file**, not the diff output.
+        *   `Code` and `Suggested Fix` are wrapped with ```diff to clearly show the code diffs and fixes.
+        *   Titles and instructions are formatted for readability.
+        *   The review **MUST** be based solely on the provided `diffs`. If there are no issues within the `diffs`, then respond with "{no_response}".
     """
 
     @staticmethod
     def get_context_lines(code, line_number, context=2):
         """
-        Lấy một số dòng xung quanh dòng thay đổi để cung cấp ngữ cảnh cho AI.
+        Lấy một số dòng xung quanh dòng thay đổi để cung cấp ngữ cảnh cho AI.  (Không còn dùng nữa, vì giờ chỉ tập trung vào diff.)
         """
         lines = code.split("\n")
         start = max(line_number - context - 1, 0) 
@@ -67,24 +74,31 @@ class AiBot(ABC):
 
     @staticmethod
     def build_ask_text(code, diffs) -> str:
-        if isinstance(diffs, list) and diffs:
-            line_number = diffs[0].get("line_number", "N/A")
-            severity = diffs[0].get("severity", "Warning")
-            issue_type = diffs[0].get("type", "General Issue") 
-            issue_description = diffs[0].get("issue_description", "No description")
-            suggested_fix = diffs[0].get("suggested_fix", "")
-        elif isinstance(diffs, dict):
-            line_number = diffs.get("line_number", "N/A")
-            severity = diffs.get("severity", "Warning")
-            issue_type = diffs.get("type", "General Issue") 
-            issue_description = diffs.get("issue_description", "No description")
-            suggested_fix = diffs.get("suggested_fix", "")
-        else:
-            line_number = "N/A"
+        """Xây dựng prompt cho AI, bao gồm code và diff."""
+
+        if not diffs:
+            return ""  # Nếu không có diff, không cần prompt
+
+        # Chuẩn bị thông tin về dòng thay đổi.  Vì ta chỉ tập trung vào diff, nên sẽ lấy thông tin này trực tiếp từ diff.
+        #  Bạn có thể cần điều chỉnh cách lấy thông tin dòng dựa trên định dạng của diffs.
+        if isinstance(diffs, str):  # Nếu diffs là một chuỗi duy nhất (ví dụ, từ git diff)
+            # Phân tích chuỗi diff để tìm số dòng.  Đây là một ví dụ đơn giản, bạn cần điều chỉnh regex cho phù hợp.
+            line_number_match = re.search(r"^\+\+\+ b/.*\n@@ -\d+,\d+ \+(\d+),?", diffs, re.MULTILINE)
+            line_number = int(line_number_match.group(1)) if line_number_match else "N/A"
+
+            # Mặc định các giá trị, có thể cần điều chỉnh
             severity = "Warning"
             issue_type = "General Issue"
-            issue_description = "No description"
+            issue_description = "Potential issue in the changed code."
             suggested_fix = ""
+        else:  # Nếu diffs là một list hoặc dict (cách cũ)
+            # Cảnh báo: Cách này có thể không chính xác nếu bạn muốn *chỉ* phân tích diff.
+            # Hãy cân nhắc việc chuyển đổi diffs thành chuỗi diff thống nhất trước khi gọi hàm này.
+            line_number = diffs[0].get("line_number", "N/A") if isinstance(diffs, list) else diffs.get("line_number", "N/A")
+            severity = diffs[0].get("severity", "Warning") if isinstance(diffs, list) else diffs.get("severity", "Warning")
+            issue_type = diffs[0].get("type", "General Issue") if isinstance(diffs, list) else diffs.get("type", "General Issue")
+            issue_description = diffs[0].get("issue_description", "No description") if isinstance(diffs, list) else diffs.get("issue_description", "No description")
+            suggested_fix = diffs[0].get("suggested_fix", "") if isinstance(diffs, list) else diffs.get("suggested_fix", "")
 
         return AiBot.__chat_gpt_ask_long.format(
             problems=AiBot.__problems,
