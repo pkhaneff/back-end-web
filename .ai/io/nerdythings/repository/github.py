@@ -149,7 +149,7 @@ class GitHub(Repository):
         if not diff_text:
             return None
 
-        hunk_start_pattern = re.compile(r"@@ -(\d+),(\d+) \+(\d+),(\d+) @@")
+        hunk_start_pattern = re.compile(r"@@ -\d+,\d+ \+(\d+),(\d+) @@")
         lines = diff_text.splitlines()
         current_hunk = None
         hunk_lines = []
