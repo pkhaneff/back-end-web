@@ -123,22 +123,19 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
     latest_commit_id = github.get_latest_commit_id()
 
     diff_lines = file_diffs.split("\n")
-    line_number = None  
+    line_number = None
 
-    total_lines_in_code = len(open(file, 'r').readlines()) 
-
-    suggestions = AiBot.split_ai_response(response, total_lines_in_code)
-
+    # Duyệt qua từng dòng diff
     for diff in diff_lines:
         if diff.startswith("@@"):
             match = re.search(r"\+(\d+)", diff)
             if match:
                 line_number = int(match.group(1))
             continue
-        
+
         if diff.startswith("+") and line_number:
-            if suggestions:
-                suggestion = suggestions.pop(0)
+            # Duyệt qua từng suggestion cho dòng này
+            for suggestion in suggestions:
                 comment_body = f"- {suggestion.text.strip()}"
 
                 if comment_body not in existing_comment_bodies:
@@ -153,7 +150,7 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
                     except RepositoryError as e:
                         Log.print_red(f"Failed to post review comment: {e}")
 
-            line_number += 1 
+            line_number += 1
 
 def parse_ai_suggestions(response):
     return response.split("\n\n") if response else []
