@@ -40,14 +40,32 @@ class AiBot(ABC):
     @staticmethod
     def build_ask_text(code, diffs) -> str:
         """Xây dựng prompt cho AI, bao gồm code và diff."""
+        
+        if isinstance(diffs, str):
+            print("DEBUG: `diffs` is a string, attempting to parse...")
+            try:
+                import json
+                diffs = json.loads(diffs)
+                if not isinstance(diffs, list):
+                    raise ValueError("Parsed `diffs` is not a list")
+            except Exception as e:
+                print(f"ERROR: Failed to parse `diffs` as JSON list - {e}")
+                return "ERROR: Invalid diff format"
 
-        diffs_with_line_numbers = "\n".join([f"[Line {d['line_number']}] {d['diff']}" for d in diffs])
-        print(f"DEBUG: diffs type: {type(diffs)}, value: {diffs}")
+        if not isinstance(diffs, list):
+            print("ERROR: `diffs` is not a list")
+            return "ERROR: Invalid diff format"
+
+        diffs_with_line_numbers = "\n".join([
+            f"[Line {d.get('line_number', '?')}] {d.get('diff', '')}" for d in diffs
+        ])
+
         return AiBot.__chat_gpt_ask_long.format(
             no_response=AiBot.__no_response,
             diffs=diffs_with_line_numbers,
             code=code
         )
+
 
     @staticmethod
     def is_no_issues_text(source: str) -> bool:
