@@ -134,12 +134,11 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
         if combined_comment_body.strip() not in existing_comment_bodies:
             Log.print_yellow(f"Posting comment at position {position}: {combined_comment_body.strip()}")
             try:
-                github.post_comment(
+                github.post_comment_to_line(
                     text=combined_comment_body.strip(),
                     commit_id=latest_commit_id,
                     file_path=file,
-                    position=position,
-                    diff_hunk=diff_content
+                    line=position
                 )
                 Log.print_yellow(f"Posted review comment at position {position}")
             except RepositoryError as e:
