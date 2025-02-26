@@ -9,7 +9,7 @@ export const importdata = async (req, res, next) => {
     if(!req.body.title) {
         return next(errorHandler(400, 'Please provide all required fields'))
     }
-    const newData = new Chatbot({
+    const = new Chatbot({
         ...req.body, userId: req.user.id
     })
     try {
