@@ -131,10 +131,12 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
 
     for diff in diff_lines:
         if diff.startswith("@@"):
+            diff_hunk = diff  # Cập nhật diff_hunk mới
+            comments_for_line.clear()  # Reset danh sách comment theo dòng khi gặp @@ mới
             match = re.search(r"\+(\d+)", diff)
             if match:
                 line_number = int(match.group(1))
-                Log.print_yellow(f"Diff hunk start: {diff}, line_number: {line_number}")
+                Log.print_yellow(f"New diff hunk: {diff_hunk}, starting at line {line_number}")
             continue
 
         if diff.startswith("+") and line_number:
