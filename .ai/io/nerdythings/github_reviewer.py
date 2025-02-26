@@ -153,7 +153,12 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
             line_number += 1
 
 def parse_ai_suggestions(response):
-    return response.split("\n\n") if response else []
+    if not response:
+        return []
+    suggestions = []
+    for suggestion_text in response.split("\n\n"):
+        suggestions.append({"text": suggestion_text.strip()})
+    return suggestions
 
 if __name__ == "__main__":
     main()
