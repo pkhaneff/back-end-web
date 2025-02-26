@@ -10,7 +10,7 @@ export const create = async (req, res, next) => {
     }
     
     const slug = req.body.title.split(' ').join('-').toLowerCase().replace(/[^a-zA-Z0-9-]/g, '')
-    const newPost = new Post({
+    const = new Post({
         ...req.body, slug, userId: req.user.id
     })
     try {
