@@ -50,3 +50,36 @@ class Git:
 
         command = ["git", "diff", base, head, "--", file_path]
         return Git.__run_subprocess(command)
+    
+    @staticmethod
+    def parse_diff_hunks(diff_output: str, file: str):
+        """
+        Phân tích diff_output để lấy các hunks cho file cụ thể.
+        """
+        hunks = []
+        current_hunk = None
+        lines = diff_output.split("\n")
+        file_header = f"diff --git a/{file} b/{file}"
+        inside_hunk = False
+        position = 0
+
+        for line in lines:
+            if line.startswith(file_header):
+                inside_hunk = True
+                continue
+            
+            if inside_hunk:
+                if line.startswith("@@"):
+                    if current_hunk:
+                        hunks.append(current_hunk)
+                    current_hunk = {"position": position, "diff": line}
+                elif current_hunk:
+                    current_hunk["diff"] += "\n" + line
+
+                position += 1
+
+        if current_hunk:
+            hunks.append(current_hunk)
+
+        return hunks
+
