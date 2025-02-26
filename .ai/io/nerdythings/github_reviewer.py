@@ -125,20 +125,20 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
     diff_lines = file_diffs.split("\n")
     line_number = None
 
-    # Duyệt qua từng dòng diff
     for diff in diff_lines:
         if diff.startswith("@@"):
             match = re.search(r"\+(\d+)", diff)
             if match:
                 line_number = int(match.group(1))
+            Log.print_yellow(f"Diff hunk start: {diff}, line_number: {line_number}")
             continue
 
         if diff.startswith("+") and line_number:
-            # Duyệt qua từng suggestion cho dòng này
             for suggestion in suggestions:
-                comment_body = f"- {suggestion['text'].strip()}"  # Corrected line
+                comment_body = f"- {suggestion['text'].strip()}"  
 
                 if comment_body not in existing_comment_bodies:
+                    Log.print_yellow(f"Posting comment to line {line_number}: {comment_body}")
                     try:
                         github.post_comment_to_line(
                             text=comment_body,
@@ -146,7 +146,7 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
                             file_path=file,
                             line=line_number
                         )
-                        Log.print_yellow(f"Posted review comment at line {line_number}: {suggestion['text'].strip()}") # Corrected Log
+                        Log.print_yellow(f"Posted review comment at line {line_number}: {suggestion['text'].strip()}")
                     except RepositoryError as e:
                         Log.print_red(f"Failed to post review comment: {e}")
 
