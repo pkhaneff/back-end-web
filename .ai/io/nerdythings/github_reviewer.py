@@ -37,11 +37,12 @@ def main():
         return
 
     Log.print_yellow(f"Filtered changed files: {changed_files}")
-    
+
     update_pr_summary(changed_files, ai, github)
-    
+
+    reviewed_files = set()
     for file in changed_files:
-        process_file(file, ai, github, vars)
+        process_file(file, ai, github, vars, reviewed_files)
 
 def update_pr_summary(changed_files, ai, github):
     Log.print_green("Updating PR description...")
@@ -59,7 +60,8 @@ def update_pr_summary(changed_files, ai, github):
     if not file_contents:
         return
 
-    full_context = {file: content[:1000] for file, content in zip(changed_files, file_contents)}
+    Log.print_yellow(f"File contents before processing: {file_contents}")
+    full_context = {file: (content[:1000] if isinstance(content, str) else "") for file, content in zip(changed_files, file_contents)}
     new_summary = ai.ai_request_summary(file_changes=full_context)
 
     pr_data = github.get_pull_request()
@@ -81,7 +83,11 @@ def update_pr_summary(changed_files, ai, github):
     except RepositoryError as e:
         Log.print_red(f"Failed to update PR description: {e}")
 
-def process_file(file, ai, github, vars):
+def process_file(file, ai, github, vars, reviewed_files):
+    if file in reviewed_files:
+        Log.print_green(f"Skipping file {file} as it has already been reviewed.")
+        return
+
     Log.print_green(f"Reviewing file: {file}")
     try:
         with open(file, 'r', encoding="utf-8", errors="replace") as f:
@@ -97,8 +103,13 @@ def process_file(file, ai, github, vars):
 
     Log.print_green(f"AI analyzing changes in {file}...")
     response = ai.ai_request_diffs(code=file_content, diffs=file_diffs)
+
+    handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
+
+def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars):
     if not response or AiBot.is_no_issues_text(response):
         Log.print_green(f"No issues detected in {file}.")
+        reviewed_files.add(file)
         return
 
     suggestions = parse_ai_suggestions(response)
@@ -108,35 +119,44 @@ def process_file(file, ai, github, vars):
 
     existing_comments = github.get_comments()
     existing_comment_bodies = {comment['body'] for comment in existing_comments}
+
     latest_commit_id = github.get_latest_commit_id()
+    pr_diff = github.get_pull_request_diff()
 
-    diff_lines = file_diffs.split("\n")
-    line_number = None
-    for diff in diff_lines:
-        if diff.startswith("@@"):
-            match = re.search(r"\@\@ -\d+,\d+ \+(\d+),\d+ \@\@", diff)
-            if match:
-                line_number = int(match.group(1))
-            continue
+    diff_hunks = Git.parse_diff_hunks(pr_diff, file)
 
-        if diff.startswith("+") and line_number:
-            comment_body = "\n".join(f"- {s['text'].strip()}" for s in suggestions)
-            if comment_body.strip() and comment_body.strip() not in existing_comment_bodies:
-                Log.print_yellow(f"Posting comment to line {line_number}: {comment_body.strip()}")
-                try:
-                    github.post_comment_to_line(
-                        text=comment_body.strip(),
-                        commit_id=latest_commit_id,
-                        file_path=file,
-                        line=line_number
-                    )
-                    Log.print_yellow(f"Posted review comment at line {line_number}")
-                except RepositoryError as e:
-                    Log.print_red(f"Failed to post review comment: {e}")
-            line_number += 1  # Move to the next line
+    for diff_hunk in diff_hunks:
+        position = diff_hunk['position']
+        diff_content = diff_hunk['diff']
+
+        combined_comment_body = "\n".join([f"- {s['text'].strip()}" for s in suggestions])
+
+        if combined_comment_body.strip() not in existing_comment_bodies:
+            Log.print_yellow(f"Posting comment at position {position}: {combined_comment_body.strip()}")
+            try:
+                github.post_comment(
+                    text=combined_comment_body.strip(),
+                    commit_id=latest_commit_id,
+                    file_path=file,
+                    position=position,
+                    diff_hunk=diff_content
+                )
+                Log.print_yellow(f"Posted review comment at position {position}")
+            except RepositoryError as e:
+                Log.print_red(f"Failed to post review comment: {e}")
+        else:
+            Log.print_yellow(f"Skipping comment: Already exists")
 
 def parse_ai_suggestions(response):
-    return [{"text": s.strip()} for s in response.split("\n\n") if s.strip()]
+    if not response:
+        return []
+
+    suggestions = []
+    for suggestion_text in response.split("\n\n"):
+        suggestion_text = suggestion_text.strip()
+        if suggestion_text:
+            suggestions.append({"text": suggestion_text})
+    return suggestions
 
 if __name__ == "__main__":
     main()
