@@ -120,20 +120,40 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files):
     existing_comments = github.get_comments()
     existing_comment_bodies = {comment['body'] for comment in existing_comments}
 
+    commit_id = github.get_latest_commit_id()
+
     for suggestion in suggestions:
-        comment_body = f"- {suggestion.strip()}"
+        comment_body = suggestion.strip()
 
         if comment_body in existing_comment_bodies:
             Log.print_green(f"Skipping duplicate comment for {file}.")
             continue
 
+        # Nếu AI có thể xác định vị trí lỗi trong file, ta có thể post vào dòng cụ thể
+        line_number = extract_line_number_from_suggestion(suggestion, file_diffs)
+
         try:
-            github.post_comment(file, comment_body)
-            Log.print_yellow(f"Posted review comment: {suggestion.strip()}")
+            if line_number:
+                github.post_comment_to_line(comment_body, commit_id, file, line_number)
+                Log.print_yellow(f"Posted line comment on {file}:{line_number}")
+            else:
+                github.post_comment_general(comment_body, commit_id)
+                Log.print_yellow(f"Posted general comment: {comment_body}")
         except RepositoryError as e:
             Log.print_red(f"Failed to post review comment: {e}")
     
     reviewed_files.add(file)
+
+def extract_line_number_from_suggestion(suggestion, file_diffs):
+    """
+    Tìm số dòng lỗi trong suggestion từ AI, nếu có thể.
+    """
+    for diff in file_diffs:
+        match = re.search(r"line (\d+)", suggestion, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+    return None
+
 
 def parse_ai_suggestions(response):
     return response.split("\n\n") if response else []
