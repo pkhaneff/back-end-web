@@ -130,20 +130,17 @@ def process_ai_response(response, github, file, diff_chunk, vars):
     existing_comment_bodies = {comment['body'] for comment in existing_comments}
 
     for comment in comments:
-        if not comment.line:
-            Log.print_yellow(f"Skipping comment because no diff: {comment.text}")
+        if not comment.text:
+            Log.print_yellow(f"Skipping comment because no content: {comment.text}")
             continue
 
-        full_comment_text = f"{comment.line}\n{comment.text.strip()}"  
-
-        if full_comment_text not in existing_comment_bodies: 
-            Log.print_yellow(f"Posting comment to diff:\n{full_comment_text}")
+        if comment.text.strip() not in existing_comment_bodies:
+            Log.print_yellow(f"Posting comment:\n{comment.text.strip()}")
             try:
                 github.post_comment_to_line(
-                    text=comment.text.strip(), 
+                    text=comment.text.strip(),  # Full comment content
                     commit_id=latest_commit_id,
-                    file_path=file,
-                    line=comment.line
+                    file_path=file
                 )
             except RepositoryError as e:
                 Log.print_red(f"Failed to post review comment: {e}")

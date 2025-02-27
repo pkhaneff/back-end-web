@@ -40,16 +40,16 @@ class GitHub(Repository):
         else:
             raise RepositoryError(f"Error fetching comments {response.status_code}: {response.text}")
 
-    def post_comment_to_line(self, text: str, commit_id: str, file_path: str, line: str):
-        """Đăng comment lên một dòng cụ thể (diff) trong pull request."""
+    def post_comment_to_line(self, text: str, commit_id: str, file_path: str, line=None):  # Line is not used
+        """Đăng comment lên pull request."""
 
         headers = {**self.__header_accept_json, **self.__header_authorization}
 
         body = {
-            "body": text,
+            "body": text,  # All content goes in body
             "commit_id": commit_id,
             "path": file_path,
-            "position": 1, # Dummy value, API doesn't support diff as position but requires a number
+            # "position": 1  # No position needed, posting a general comment now
         }
 
         Log.print_yellow(f"Đang gửi request đến GitHub API: {self.__url_add_comment}")

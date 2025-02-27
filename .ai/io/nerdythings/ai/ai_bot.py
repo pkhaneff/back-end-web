@@ -105,19 +105,20 @@ class AiBot(ABC):
                 severity, issue_type, description = match.groups()
 
                 code_match = re.search(r"Code:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
-                code = code_match.group(1).strip() if code_match else ""
+                code = code_match.group(1).strip() if code_match else ""  # This is the diff!
 
-                fix_match = re.search(r"Suggested Fix\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
+                fix_match = re.search(r"Suggested Fix:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
                 suggested_fix = fix_match.group(1).strip() if fix_match else ""
 
+                # Build the comment text - INCLUDE the diff itself here!
                 comment_text = f"**[ERROR] - [{severity}] - [{issue_type}] - {description.strip()}**\n\n"
-                if code:
-                    comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
+                comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
                 if suggested_fix:
                     comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
 
-                comments.append(LineComment(line=code, text=comment_text)) 
+                # Create the LineComment object - NO diff in 'line', all in 'text'
+                comments.append(LineComment(line="", text=comment_text))
             else:
-                comments.append(LineComment(line=0, text=entry))
+                comments.append(LineComment(line="", text=entry))
 
         return comments
