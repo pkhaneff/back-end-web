@@ -135,8 +135,8 @@ class AiBot(ABC):
                     print(f"Warning: Không thể parse line number: {line_number_from_ai}")
                     continue 
 
-                # Adjust line_number based on offset.  Crucially, *do not* subtract 1.
                 adjusted_line = offset + (line_number_from_ai - 1)
+                print(f"Debug: offset={offset}, line_number_from_ai={line_number_from_ai}, adjusted_line={adjusted_line}")
 
                 if adjusted_line < 1 or adjusted_line > total_lines_in_code:
                     print(f"Warning: Line number out of range: {adjusted_line}")

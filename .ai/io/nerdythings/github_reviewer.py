@@ -113,45 +113,43 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
         reviewed_files.add(file)
         return
 
+    try:
+        with open(file, 'r', encoding="utf-8", errors="replace") as f:
+            file_content = f.read()
+    except FileNotFoundError:
+        Log.print_yellow(f"File not found: {file}")
+        return
+
+    total_lines_in_code = len(file_content.splitlines())
+
+    comments = AiBot.split_ai_response(response, file_diffs, total_lines_in_code)
+
     existing_comments = github.get_comments()
     existing_comment_bodies = {comment['body'] for comment in existing_comments}
 
     latest_commit_id = github.get_latest_commit_id()
 
-    diff_lines = file_diffs.split("\n")
-    diff_hunk = None
-    line_number = None
-
-    for diff in diff_lines:
-        if diff.startswith("@@"):
-            diff_hunk = diff
-            match = re.search(r"\+(\d+)", diff)
-            if match:
-                line_number = int(match.group(1))
-                Log.print_yellow(f"New diff hunk: {diff_hunk}, starting at line {line_number}")
-
-                hunk_suggestions = parse_ai_suggestions(response)
-
-                comment_body = f"**Diff Hunk:**\n{diff_hunk}\n\n"
-                for suggestion in hunk_suggestions:
-                    comment_body += f"- {suggestion['text'].strip()}\n"
-
-                if comment_body.strip() not in existing_comment_bodies:
-                    Log.print_yellow(f"Posting comment for hunk starting at line {line_number}: {comment_body.strip()}")
-                    try:
-                        github.post_comment_to_line(
-                            text=comment_body.strip(),
-                            commit_id=latest_commit_id,
-                            file_path=file,
-                            line=line_number
-                        )
-                        Log.print_yellow(f"Posted review comment for hunk starting at line {line_number}: {comment_body.strip()}")
-                    except RepositoryError as e:
-                        Log.print_red(f"Failed to post review comment: {e}")
-                else:
-                    Log.print_yellow(f"Skipping comment: Comment already exists")
-
+    for comment in comments:
+        if comment.line == 0:
+            Log.print_yellow(f"Skipping comment: {comment.text}")
             continue
+
+        if comment.text.strip() not in existing_comment_bodies:
+            Log.print_yellow(f"Posting comment to line {comment.line}: {comment.text.strip()}")
+            try:
+                github.post_comment_to_line(
+                    text=comment.text.strip(),
+                    commit_id=latest_commit_id,
+                    file_path=file,
+                    line=comment.line
+                )
+                Log.print_yellow(f"Posted review comment to line {comment.line}: {comment.text.strip()}")
+            except RepositoryError as e:
+                Log.print_red(f"Failed to post review comment: {e}")
+        else:
+            Log.print_yellow(f"Skipping comment: Comment already exists")
+
+    reviewed_files.add(file)
 
 def parse_ai_suggestions(response):
     if not response:
