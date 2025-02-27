@@ -1,4 +1,5 @@
 import requests
+from log import Log
 from repository.repository import Repository, RepositoryError
 import re
 
@@ -43,27 +44,32 @@ class GitHub(Repository):
         """Đăng comment lên một dòng cụ thể trong pull request."""
 
         diff_hunk = self._get_diff_hunk_for_line(file_path, line)
-
+        
         if not diff_hunk:
-            print(f"Không tìm thấy diff hunk cho file: {file_path}, line: {line}")
-            return  # Hoặc xử lý theo cách phù hợp, ví dụ raise RepositoryError
+            Log.print_red(f"Không tìm thấy diff hunk cho file: {file_path}, line: {line}")
+            return  
 
-        headers = self.__header_accept_json | self.__header_authorization
+        headers = {**self.__header_accept_json, **self.__header_authorization}
 
         body = {
             "body": text,
             "commit_id": commit_id,
             "path": file_path,
-            "position": line,
-            "diff_hunk": diff_hunk  # Thêm diff_hunk vào body
+            "position": line
         }
+
+        Log.print_yellow(f"Đang gửi request đến GitHub API: {self.__url_add_comment}")
+        Log.print_yellow(f"Request body: {body}")
 
         response = requests.post(self.__url_add_comment, json=body, headers=headers)
 
         if response.status_code in [200, 201]:
+            Log.print_green("Comment đã được post thành công!")
             return response.json()
         else:
+            Log.print_red(f"Lỗi khi gửi comment: {response.status_code} - {response.text}")
             raise RepositoryError(f"Error with line comment {response.status_code} : {response.text}")
+
 
     def post_comment_general(self, text, commit_id=None):
         headers = self.__header_accept_json | self.__header_authorization
@@ -133,7 +139,7 @@ class GitHub(Repository):
         url = f"https://api.github.com/repos/{self.repo_owner}/{self.repo_name}/pulls/{self.pull_number}"
         headers = {
             "Authorization": f"token {self.token}",
-            "Accept": "application/vnd.github.v3.diff"  # Yêu cầu định dạng diff
+            "Accept": "application/vnd.github.v3.diff"
         }
         response = requests.get(url, headers=headers)
 
@@ -142,45 +148,54 @@ class GitHub(Repository):
         else:
             raise RepositoryError(f"Error getting diff: {response.status_code}")
 
-    def _extract_diff_hunk_for_line(self, file_path, line_number):
-        """Trích xuất diff hunk chứa dòng cụ thể."""
+    def _extract_diff_hunk_for_line(self, file_path, line_number, context_lines=3):
+        """Trích xuất diff hunk chứa dòng cụ thể, với context."""
 
         diff_text = self._get_pull_request_diff()
         if not diff_text:
             return None
 
-        hunk_start_pattern = re.compile(r"@@ -(\d+),(\d+) \+(\d+),(\d+) @@")
+        hunk_start_pattern = re.compile(r"@@ -(\d+),?(\d*) \+(\d+),?(\d*) @@")
         lines = diff_text.splitlines()
         current_hunk = None
         hunk_lines = []
+        hunk_start_index = None
 
-        for line in lines:
-            if line.startswith("diff --git"):
-                # Kiểm tra file path để bỏ qua các file không liên quan
-                if file_path not in line:
-                    continue
-                current_hunk = None  # Reset hunk khi gặp file mới
+        for i, line in enumerate(lines):
+            if line.startswith("diff --git") and file_path not in line:
+                continue
             elif line.startswith("@@"):
-                # Bắt đầu một hunk mới
                 match = hunk_start_pattern.match(line)
                 if match:
-                    old_start, old_length, new_start, new_length = map(int, match.groups())
-                    if new_start <= line_number <= new_start + new_length:
-                        # hunk này chứa line_number
+                    old_start, old_length, new_start, new_length = match.groups()
+
+                    try:
+                        new_start = int(new_start)
+                        new_length = int(new_length) if new_length else 1
+                    except ValueError:
+                        print(f"Invalid number format in diff hunk: {line}")
+                        return None
+
+                    if new_start <= line_number <= new_start + new_length - 1:
                         current_hunk = {
                             "start": new_start,
                             "lines": []
                         }
+                        hunk_start_index = i
                     else:
-                        current_hunk = None  # Hunk không liên quan
-                    hunk_lines = []  # Reset dòng của hunk
+                        current_hunk = None
+                    hunk_lines = []
+
             elif current_hunk is not None:
                 hunk_lines.append(line)
 
-        if current_hunk:
-            return "\n".join(hunk_lines)
-        else:
-            return None
+        if current_hunk and hunk_start_index is not None:
+            start_index = max(0, hunk_start_index - context_lines)
+            end_index = min(len(lines), hunk_start_index + len(hunk_lines) + context_lines)
+            context_hunk_lines = lines[start_index:end_index]
+            return "\n".join(context_hunk_lines)
+
+        return None
 
     def _get_diff_hunk_for_line(self, file_path, line_number):
       """

@@ -113,64 +113,48 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
         reviewed_files.add(file)
         return
 
-    suggestions = parse_ai_suggestions(response)
-    if not suggestions:
-        Log.print_red(f"Failed to parse AI suggestions for {file}.")
+    try:
+        with open(file, 'r', encoding="utf-8", errors="replace") as f:
+            file_content = f.read()
+    except FileNotFoundError:
+        Log.print_yellow(f"File not found: {file}")
         return
 
+    total_lines_in_code = len(file_content.splitlines())
+
+    comments = AiBot.split_ai_response(response, file_diffs, total_lines_in_code)
+
     existing_comments = github.get_comments()
-    existing_comment_bodies = {comment['body'] for comment in existing_comments}
+    Log.print_yellow(f"Existing comments: {existing_comments}")
 
     latest_commit_id = github.get_latest_commit_id()
+    Log.print_yellow(f"Latest commit ID: {latest_commit_id}")
 
-    diff_lines = file_diffs.split("\n")
-    line_number = None
+    existing_comment_bodies = {comment['body'] for comment in existing_comments}
 
-    # Gom góp các comment cho cùng một dòng để tạo thành một comment duy nhất
-    comments_for_line = {}
-
-    for diff in diff_lines:
-        if diff.startswith("@@"):
-            match = re.search(r"\+(\d+)", diff)
-            if match:
-                line_number = int(match.group(1))
-                Log.print_yellow(f"Diff hunk start: {diff}, line_number: {line_number}")
+    for comment in comments:
+        if comment.line == 0:
+            Log.print_yellow(f"Skipping comment: {comment.text}")
             continue
 
-        if diff.startswith("+") and line_number:
-            # Khởi tạo list nếu chưa có
-            if line_number not in comments_for_line:
-                comments_for_line[line_number] = []
-
-            for suggestion in suggestions:
-                comments_for_line[line_number].append(suggestion)
-
-            line_number += 1
-
-    # Sau khi đã duyệt hết diff, tiến hành post comment
-    for line_number, suggestions in comments_for_line.items():
-        # Tạo comment body tổng hợp
-        combined_comment_body = ""
-        for suggestion in suggestions:
-            comment_body = f"- {suggestion['text'].strip()}"
-            combined_comment_body += comment_body + "\n"
-
-        # Kiểm tra comment đã tồn tại hay chưa
-        if combined_comment_body.strip() not in existing_comment_bodies:
-            Log.print_yellow(f"Posting combined comment to line {line_number}: {combined_comment_body.strip()}")
+        if comment.text.strip() not in existing_comment_bodies:
+            Log.print_yellow(f"Posting comment to line {comment.line}: {comment.text.strip()}")
             try:
-                github.post_comment_to_line(
-                    text=combined_comment_body.strip(),  # Post comment tổng hợp
+                response = github.post_comment_to_line(
+                    text=comment.text.strip(),
                     commit_id=latest_commit_id,
                     file_path=file,
-                    line=line_number
+                    line=comment.line
                 )
-                Log.print_yellow(f"Posted review comment at line {line_number}: {combined_comment_body.strip()}")
+                Log.print_yellow(f"GitHub API Response: {response}")
             except RepositoryError as e:
                 Log.print_red(f"Failed to post review comment: {e}")
+            except Exception as e:
+                Log.print_red(f"Unexpected error: {e}")
         else:
-            Log.print_yellow(f"Skipping comment: Combined comment already exists")
+            Log.print_yellow(f"Skipping comment: Comment already exists")
 
+    reviewed_files.add(file)
 
 def parse_ai_suggestions(response):
     if not response:
