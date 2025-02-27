@@ -124,9 +124,6 @@ def process_ai_response(response, github, file, diff_chunk, vars):
     existing_comments = github.get_comments()
     Log.print_yellow(f"Existing comments: {existing_comments}")
 
-    latest_commit_id = github.get_latest_commit_id()
-    Log.print_yellow(f"Latest commit ID: {latest_commit_id}")
-
     existing_comment_bodies = {comment['body'] for comment in existing_comments}
 
     for comment in comments:
@@ -138,8 +135,7 @@ def process_ai_response(response, github, file, diff_chunk, vars):
             Log.print_yellow(f"Posting general comment:\n{comment.text.strip()}")
             try:
                 github.post_comment_general(
-                    text=comment.text.strip(),  # Full comment content
-                    commit_id=latest_commit_id
+                    text=comment.text.strip()  # Full comment content
                 )
             except RepositoryError as e:
                 Log.print_red(f"Failed to post review comment: {e}")
