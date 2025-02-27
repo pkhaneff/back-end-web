@@ -4,6 +4,12 @@ from typing import List
 from log import Log
 
 class Git:
+
+    @staticmethod
+    def split_diff_into_chunks(diff_text):
+        """Chia một diff lớn thành danh sách các diff chunk nhỏ hơn."""
+        return re.split(r"(diff --git.*?)(?=diff --git|\Z)", diff_text, flags=re.DOTALL)[1::2]
+    
     @staticmethod
     def __run_subprocess(command):
         Log.print_green(command)

@@ -2,8 +2,9 @@ from abc import ABC, abstractmethod
 import re
 from ai.line_comment import LineComment  # Đảm bảo import class LineComment
 
+
 class AiBot(ABC):
-    
+
     __no_response = "No critical issues found"
     __problems = "errors, security issues, performance bottlenecks, or bad practices"
     __chat_gpt_ask_long = """
@@ -25,7 +26,7 @@ class AiBot(ABC):
         **Output Format:**
         Each issue should follow the following Markdown format, resembling a commit log:
 
-        **[Line {line_number}] - [{severity}] - [{type}] - {issue_description}**
+        **[ERROR] - [{severity}] - [{type}] - {issue_description}**
 
         **Code:**
         ```diff
@@ -38,21 +39,8 @@ class AiBot(ABC):
         ```
 
         **Important Notes:**
-        *   The `line_number` refers to the line number in the **modified file**, not the diff output.
-        *   `Code` and `Suggested Fix` are wrapped with ```diff to clearly show the code diffs and fixes.
-        *   Titles and instructions are formatted for readability.
         *   The review **MUST** be based solely on the provided `diffs`. If there are no issues within the `diffs`, then respond with "{no_response}".
     """
-
-    @staticmethod
-    def get_context_lines(code, line_number, context=2):
-        """
-        Lấy một số dòng xung quanh dòng thay đổi để cung cấp ngữ cảnh cho AI.  (Không còn dùng nữa, vì giờ chỉ tập trung vào diff.)
-        """
-        lines = code.split("\n")
-        start = max(line_number - context - 1, 0) 
-        end = min(line_number + context, len(lines))
-        return "\n".join(lines[start:end])
 
     @abstractmethod
     def ai_request_diffs(self, code, diffs) -> str:
@@ -63,30 +51,26 @@ class AiBot(ABC):
         """Xây dựng prompt cho AI, bao gồm code và diff."""
 
         if not diffs:
-            return "" 
-        if isinstance(diffs, str): 
-            line_number_match = re.search(r"^\+\+\+ b/.*\n@@ -\d+,\d+ \+(\d+),?", diffs, re.MULTILINE)
-            line_number = int(line_number_match.group(1)) if line_number_match else "N/A"
+            return ""
 
+        if isinstance(diffs, str):
+            code_to_review = diffs 
             severity = "Warning"
             issue_type = "General Issue"
             issue_description = "Potential issue in the changed code."
             suggested_fix = ""
-            code_to_review = diffs
-        else: 
-            line_number = diffs[0].get("line_number", "N/A") if isinstance(diffs, list) else diffs.get("line_number", "N/A")
+        else:
+            code_to_review = diffs[0].get("code", "") if isinstance(diffs, list) else diffs.get("code", "")
             severity = diffs[0].get("severity", "Warning") if isinstance(diffs, list) else diffs.get("severity", "Warning")
             issue_type = diffs[0].get("type", "General Issue") if isinstance(diffs, list) else diffs.get("type", "General Issue")
             issue_description = diffs[0].get("issue_description", "No description") if isinstance(diffs, list) else diffs.get("issue_description", "No description")
             suggested_fix = diffs[0].get("suggested_fix", "") if isinstance(diffs, list) else diffs.get("suggested_fix", "")
-            code_to_review = diffs[0].get("code", "") if isinstance(diffs, list) else diffs.get("code", "")
 
         return AiBot.__chat_gpt_ask_long.format(
             problems=AiBot.__problems,
             no_response=AiBot.__no_response,
-            diffs=code_to_review, 
+            diffs=code_to_review,
             code=code,
-            line_number=line_number,
             severity=severity,
             type=issue_type,
             issue_description=issue_description,
@@ -98,24 +82,14 @@ class AiBot(ABC):
         target = AiBot.__no_response.replace(" ", "")
         source_no_spaces = source.replace(" ", "")
         return source_no_spaces.startswith(target)
-    
-    @staticmethod
-    def extract_offset_from_hunk(diffs):
-        """Trích xuất số dòng bắt đầu từ hunk diff"""
-        match = re.search(r"@@ -\d+,\d+ \+(\d+),?", diffs)
-        if match:
-            return int(match.group(1))  
-        return None  
 
     @staticmethod
-    def split_ai_response(input, diffs, total_lines_in_code) -> list[LineComment]:
-        """Chia AI response thành danh sách comment kèm vị trí dòng chính xác"""
+    def split_ai_response(input, diffs) -> list[LineComment]:
+        """
+        Chia AI response thành danh sách comment, mỗi comment chứa diff (code thay đổi)
+        gây ra lỗi và thông tin về lỗi đó.
+        """
         if not input:
-            return []
-
-        offset = AiBot.extract_offset_from_hunk(diffs)
-        if offset is None:
-            print("Warning: Không tìm thấy offset từ hunk!")
             return []
 
         comments = []
@@ -126,36 +100,25 @@ class AiBot(ABC):
             if not entry:
                 continue
 
-            match = re.match(r"\s*\[Line\s*(\d+)\s*\]\s*-\s*\[(Warning|Error|Critical)\]\s*-\s*\[(.*?)\]\s*-\s*(.*)", entry)
+            match = re.match(r"\s*\[ERROR\]\s*-\s*\[(Warning|Error|Critical)\]\s*-\s*\[(.*?)\]\s*-\s*(.*)", entry)
             if match:
-                line_number_from_ai, severity, issue_type, description = match.groups()
-                try:
-                    line_number_from_ai = int(line_number_from_ai)
-                except ValueError:
-                    print(f"Warning: Không thể parse line number: {line_number_from_ai}")
-                    continue 
-
-                adjusted_line = offset + (line_number_from_ai - 1)
-                print(f"Debug: offset={offset}, line_number_from_ai={line_number_from_ai}, adjusted_line={adjusted_line}")
-
-                if adjusted_line < 1 or adjusted_line > total_lines_in_code:
-                    print(f"Warning: Line number out of range: {adjusted_line}")
-                    continue
+                severity, issue_type, description = match.groups()
 
                 code_match = re.search(r"Code:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
-                code = code_match.group(1).strip() if code_match else ""
+                code = code_match.group(1).strip() if code_match else ""  # This is the diff!
 
-                fix_match = re.search(r"Suggested Fix\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
+                fix_match = re.search(r"Suggested Fix:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
                 suggested_fix = fix_match.group(1).strip() if fix_match else ""
 
-                comment_text = f"**[Line {adjusted_line}] - [{severity}] - [{issue_type}] - {description.strip()}**\n\n"
-                if code:
-                    comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
+                # Build the comment text - INCLUDE the diff itself here!
+                comment_text = f"**[ERROR] - [{severity}] - [{issue_type}] - {description.strip()}**\n\n"
+                comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
                 if suggested_fix:
                     comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
 
-                comments.append(LineComment(line=adjusted_line, text=comment_text))
+                # Create the LineComment object - NO diff in 'line', all in 'text'
+                comments.append(LineComment(line="", text=comment_text))
             else:
-                comments.append(LineComment(line=0, text=entry))
+                comments.append(LineComment(line="", text=entry))
 
         return comments
