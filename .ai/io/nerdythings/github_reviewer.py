@@ -101,48 +101,38 @@ def process_file(file, ai, github, vars, reviewed_files):
         Log.print_red(f"No diffs found for: {file}")
         return
 
+    # Split diffs into individual chunks/changes
     individual_diffs = Git.split_diff_into_chunks(file_diffs)
 
     for diff_chunk in individual_diffs:
         Log.print_green(f"AI analyzing changes in {file}...")
-        response = ai.ai_request_diffs(code=file_content, diffs=diff_chunk) 
+        response = ai.ai_request_diffs(code=file_content, diffs=diff_chunk)  # review each change.
 
-        process_ai_response(response, github, file, diff_chunk, vars)
+        # Process AI response and post comment immediately
+        if response and not AiBot.is_no_issues_text(response):
+            comments = AiBot.split_ai_response(response, diff_chunk)
+            for comment in comments:  # Process each comment separately
+                if comment.text:
+                    existing_comments = github.get_comments()
+                    existing_comment_bodies = {c['body'] for c in existing_comments}
+
+                    comment_text = comment.text.strip()
+                    if comment_text not in existing_comment_bodies:
+                        Log.print_yellow(f"Posting general comment:\n{comment_text}")
+                        try:
+                            github.post_comment_general(
+                                text=comment_text  # Full comment content
+                            )
+                        except RepositoryError as e:
+                            Log.print_red(f"Failed to post review comment: {e}")
+                        except Exception as e:
+                            Log.print_red(f"Unexpected error: {e}")
+                    else:
+                        Log.print_yellow(f"Skipping comment: Comment already exists")
+                else:
+                    Log.print_yellow(f"Skipping comment because no content.")
 
     reviewed_files.add(file)
-
-def process_ai_response(response, github, file, diff_chunk, vars):
-    """
-    Processes the AI response for a single diff chunk and posts a comment to GitHub if needed.
-    """
-    if not response or AiBot.is_no_issues_text(response):
-        Log.print_green(f"No issues detected in this diff chunk of {file}.")
-        return
-
-    comments = AiBot.split_ai_response(response, diff_chunk)
-
-    existing_comments = github.get_comments()
-    Log.print_yellow(f"Existing comments: {existing_comments}")
-
-    existing_comment_bodies = {comment['body'] for comment in existing_comments}
-
-    for comment in comments:
-        if not comment.text:
-            Log.print_yellow(f"Skipping comment because no content: {comment.text}")
-            continue
-
-        if comment.text.strip() not in existing_comment_bodies:
-            Log.print_yellow(f"Posting general comment:\n{comment.text.strip()}")
-            try:
-                github.post_comment_general(
-                    text=comment.text.strip()  # Full comment content
-                )
-            except RepositoryError as e:
-                Log.print_red(f"Failed to post review comment: {e}")
-            except Exception as e:
-                Log.print_red(f"Unexpected error: {e}")
-        else:
-            Log.print_yellow(f"Skipping comment: Comment already exists")
 
 def parse_ai_suggestions(response):
     if not response:
