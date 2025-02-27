@@ -128,15 +128,16 @@ class AiBot(ABC):
 
             match = re.match(r"\s*\[Line\s*(\d+)\s*\]\s*-\s*\[(Warning|Error|Critical)\]\s*-\s*\[(.*?)\]\s*-\s*(.*)", entry)
             if match:
-                line_number, severity, issue_type, description = match.groups()
+                line_number_from_ai, severity, issue_type, description = match.groups()
                 try:
-                    line_number = int(line_number)
+                    line_number_from_ai = int(line_number_from_ai)
                 except ValueError:
-                    print(f"Warning: Không thể parse line number: {line_number}")
+                    print(f"Warning: Không thể parse line number: {line_number_from_ai}")
                     continue 
 
-                # Điều chỉnh line_number dựa trên offset
-                adjusted_line = offset + (line_number - 1)
+                # Adjust line_number based on offset.  Crucially, *do not* subtract 1.
+                adjusted_line = offset + (line_number_from_ai - 1)
+
                 if adjusted_line < 1 or adjusted_line > total_lines_in_code:
                     print(f"Warning: Line number out of range: {adjusted_line}")
                     continue
