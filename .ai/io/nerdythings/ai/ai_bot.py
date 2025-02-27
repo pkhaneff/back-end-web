@@ -87,15 +87,16 @@ class AiBot(ABC):
     def split_ai_response(input, diffs, file_path="") -> list[LineComment]:
         """
         Chia AI response thành danh sách comment, mỗi comment chứa diff (code thay đổi)
-        gây ra lỗi và thông tin về lỗi đó. Thêm file_path vào đầu mỗi comment.
+        gây ra lỗi và thông tin về lỗi đó. Thêm file_path vào đầu mỗi comment và gạch ngang phân tách.
         """
         if not input:
             return []
 
         comments = []
         entries = re.split(r"###", input.strip())
+        separator = "---\n"  # Gạch ngang phân tách bằng Markdown
 
-        for entry in entries:
+        for i, entry in enumerate(entries):
             entry = entry.strip()
             if not entry:
                 continue
@@ -116,9 +117,17 @@ class AiBot(ABC):
                 if suggested_fix:
                     comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
 
+                # Thêm gạch ngang phân tách (trừ comment đầu tiên)
+                if i > 0:
+                    comment_text = separator + comment_text
+
                 comments.append(LineComment(line="", text=comment_text))
             else:
                 comment_text = f"**File:** {file_path}\n\n" if file_path else "" # Thêm file path vào comment text
+                # Thêm gạch ngang phân tách (trừ comment đầu tiên)
+                if i > 0:
+                    comment_text = separator + comment_text
+
                 comment_text += entry
                 comments.append(LineComment(line="", text=comment_text))
 
