@@ -43,11 +43,12 @@ class GitHub(Repository):
     def post_comment_to_line(self, text: str, commit_id: str, file_path: str, line: int):
         """Đăng comment lên một dòng cụ thể trong pull request."""
 
-        diff_hunk = self._get_diff_hunk_for_line(file_path, line)
+        # No longer needed.
+        # diff_hunk = self._get_diff_hunk_for_line(file_path, line)
         
-        if not diff_hunk:
-            Log.print_red(f"Không tìm thấy diff hunk cho file: {file_path}, line: {line}")
-            return  
+        # if not diff_hunk:
+        #     Log.print_red(f"Không tìm thấy diff hunk cho file: {file_path}, line: {line}")
+        #     return  
 
         headers = {**self.__header_accept_json, **self.__header_authorization}
 
@@ -55,7 +56,7 @@ class GitHub(Repository):
             "body": text,
             "commit_id": commit_id,
             "path": file_path,
-            "position": line
+            "position": line  # Line number is required.
         }
 
         Log.print_yellow(f"Đang gửi request đến GitHub API: {self.__url_add_comment}")

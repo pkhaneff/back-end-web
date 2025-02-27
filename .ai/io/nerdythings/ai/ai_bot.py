@@ -38,7 +38,7 @@ class AiBot(ABC):
         ```
 
         **Important Notes:**
-        *   The `line_number` refers to the line number in the **modified file**, not the diff output.
+        *   The `line_number` refers to the line number in the **modified file**.
         *   `Code` and `Suggested Fix` are wrapped with ```diff to clearly show the code diffs and fixes.
         *   Titles and instructions are formatted for readability.
         *   The review **MUST** be based solely on the provided `diffs`. If there are no issues within the `diffs`, then respond with "{no_response}".
@@ -63,18 +63,23 @@ class AiBot(ABC):
         """Xây dựng prompt cho AI, bao gồm code và diff."""
 
         if not diffs:
-            return "" 
-        if isinstance(diffs, str): 
+            return ""
+        
+        if isinstance(diffs, str):
+            # Handle the case when diffs is a raw string of the diff content.
+
+            # Try to find line number. In some cases, we might not find it, so default to 1.
             line_number_match = re.search(r"^\+\+\+ b/.*\n@@ -\d+,\d+ \+(\d+),?", diffs, re.MULTILINE)
-            line_number = int(line_number_match.group(1)) if line_number_match else "N/A"
+            line_number = int(line_number_match.group(1)) if line_number_match else 1
 
             severity = "Warning"
             issue_type = "General Issue"
             issue_description = "Potential issue in the changed code."
             suggested_fix = ""
-            code_to_review = diffs
-        else: 
-            line_number = diffs[0].get("line_number", "N/A") if isinstance(diffs, list) else diffs.get("line_number", "N/A")
+            code_to_review = diffs  # Entire diff content passed
+        else:
+            # Handle the case when diffs is already structured.
+            line_number = diffs[0].get("line_number", 1) if isinstance(diffs, list) else diffs.get("line_number", 1)
             severity = diffs[0].get("severity", "Warning") if isinstance(diffs, list) else diffs.get("severity", "Warning")
             issue_type = diffs[0].get("type", "General Issue") if isinstance(diffs, list) else diffs.get("type", "General Issue")
             issue_description = diffs[0].get("issue_description", "No description") if isinstance(diffs, list) else diffs.get("issue_description", "No description")
@@ -92,6 +97,7 @@ class AiBot(ABC):
             issue_description=issue_description,
             suggested_fix=suggested_fix
         )
+
 
     @staticmethod
     def is_no_issues_text(source: str) -> bool:
@@ -113,10 +119,8 @@ class AiBot(ABC):
         if not input:
             return []
 
-        offset = AiBot.extract_offset_from_hunk(diffs)
-        if offset is None:
-            print("Warning: Không tìm thấy offset từ hunk!")
-            return []
+        # Extract offset is not reliable anymore since we deal with individual diffs.
+        # So we remove the offset extraction. The AI should directly tell us the line number.
 
         comments = []
         entries = re.split(r"###", input.strip())
@@ -133,10 +137,10 @@ class AiBot(ABC):
                     line_number_from_ai = int(line_number_from_ai)
                 except ValueError:
                     print(f"Warning: Không thể parse line number: {line_number_from_ai}")
-                    continue 
+                    continue
 
-                adjusted_line = offset + (line_number_from_ai - 1)
-                print(f"Debug: offset={offset}, line_number_from_ai={line_number_from_ai}, adjusted_line={adjusted_line}")
+                adjusted_line = int(line_number_from_ai) # line number should be relative to whole file.
+                print(f"Debug: line_number_from_ai={line_number_from_ai}, adjusted_line={adjusted_line}")
 
                 if adjusted_line < 1 or adjusted_line > total_lines_in_code:
                     print(f"Warning: Line number out of range: {adjusted_line}")

@@ -101,17 +101,22 @@ def process_file(file, ai, github, vars, reviewed_files):
         Log.print_red(f"No diffs found for: {file}")
         return
 
-    Log.print_green(f"AI analyzing changes in {file}...")
-    response = ai.ai_request_diffs(code=file_content, diffs=file_diffs)
+    # Split diffs into individual chunks/changes
+    individual_diffs = Git.split_diff_into_chunks(file_diffs)
 
-    handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
+    for diff_chunk in individual_diffs:
+        Log.print_green(f"AI analyzing changes in {file}...")
+        response = ai.ai_request_diffs(code=file_content, diffs=diff_chunk) # review each change.
 
+        # Send diff chunk to handle_ai_response
+        handle_ai_response(response, github, file, diff_chunk, reviewed_files, vars)
+
+    reviewed_files.add(file)
 
 def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars):
     if not response or AiBot.is_no_issues_text(response):
         Log.print_green(f"No issues detected in {file}.")
-        reviewed_files.add(file)
-        return
+        return # Skip posting
 
     try:
         with open(file, 'r', encoding="utf-8", errors="replace") as f:
@@ -154,7 +159,6 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
         else:
             Log.print_yellow(f"Skipping comment: Comment already exists")
 
-    reviewed_files.add(file)
 
 def parse_ai_suggestions(response):
     if not response:
@@ -166,7 +170,6 @@ def parse_ai_suggestions(response):
         if suggestion_text:
             suggestions.append({"text": suggestion_text})
     return suggestions
-
 
 if __name__ == "__main__":
     main()
