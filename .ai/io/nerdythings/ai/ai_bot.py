@@ -105,22 +105,12 @@ class AiBot(ABC):
         source_no_spaces = source.replace(" ", "")
         return source_no_spaces.startswith(target)
     
-    @staticmethod
-    def extract_offset_from_hunk(diffs):
-        """Trích xuất số dòng bắt đầu từ hunk diff"""
-        match = re.search(r"@@ -\d+,\d+ \+(\d+),?", diffs)
-        if match:
-            return int(match.group(1))  
-        return None  
 
     @staticmethod
     def split_ai_response(input, diffs, total_lines_in_code) -> list[LineComment]:
         """Chia AI response thành danh sách comment kèm vị trí dòng chính xác"""
         if not input:
             return []
-
-        # Extract offset is not reliable anymore since we deal with individual diffs.
-        # So we remove the offset extraction. The AI should directly tell us the line number.
 
         comments = []
         entries = re.split(r"###", input.strip())
