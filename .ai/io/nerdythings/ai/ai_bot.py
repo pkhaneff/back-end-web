@@ -84,10 +84,10 @@ class AiBot(ABC):
         return source_no_spaces.startswith(target)
 
     @staticmethod
-    def split_ai_response(input, diffs) -> list[LineComment]:
+    def split_ai_response(input, diffs, file_path="") -> list[LineComment]:
         """
         Chia AI response thành danh sách comment, mỗi comment chứa diff (code thay đổi)
-        gây ra lỗi và thông tin về lỗi đó.
+        gây ra lỗi và thông tin về lỗi đó. Thêm file_path vào đầu mỗi comment.
         """
         if not input:
             return []
@@ -110,13 +110,16 @@ class AiBot(ABC):
                 fix_match = re.search(r"Suggested Fix:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
                 suggested_fix = fix_match.group(1).strip() if fix_match else ""
 
-                comment_text = f"**[ERROR] - [{severity}] - [{issue_type}] - {description.strip()}**\n\n"
+                comment_text = f"**File:** {file_path}\n\n" if file_path else "" # Thêm file path vào comment text
+                comment_text += f"**[ERROR] - [{severity}] - [{issue_type}] - {description.strip()}**\n\n"
                 comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
                 if suggested_fix:
                     comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
 
                 comments.append(LineComment(line="", text=comment_text))
             else:
-                comments.append(LineComment(line="", text=entry))
+                comment_text = f"**File:** {file_path}\n\n" if file_path else "" # Thêm file path vào comment text
+                comment_text += entry
+                comments.append(LineComment(line="", text=comment_text))
 
         return comments
