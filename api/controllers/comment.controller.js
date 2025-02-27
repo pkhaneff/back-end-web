@@ -51,7 +51,7 @@ export const likeComment = async (req, res, next) => {
     }
   };
 
-export  = async (req, res, next) => {
+export const editComment = async (req, res, next) => {
   try {
     const comment = await Comment.findById(req.params.commentId)
     if (!comment) {
