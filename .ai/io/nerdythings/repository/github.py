@@ -1,4 +1,5 @@
 import requests
+from log import Log
 from repository.repository import Repository, RepositoryError
 import re
 
@@ -43,27 +44,32 @@ class GitHub(Repository):
         """Đăng comment lên một dòng cụ thể trong pull request."""
 
         diff_hunk = self._get_diff_hunk_for_line(file_path, line)
-
+        
         if not diff_hunk:
-            print(f"Không tìm thấy diff hunk cho file: {file_path}, line: {line}")
-            return  # Hoặc xử lý theo cách phù hợp, ví dụ raise RepositoryError
+            Log.print_red(f"Không tìm thấy diff hunk cho file: {file_path}, line: {line}")
+            return  
 
-        headers = self.__header_accept_json | self.__header_authorization
+        headers = {**self.__header_accept_json, **self.__header_authorization}
 
         body = {
             "body": text,
             "commit_id": commit_id,
             "path": file_path,
-            "position": line,
-            "diff_hunk": diff_hunk  # Thêm diff_hunk vào body
+            "position": line
         }
+
+        Log.print_yellow(f"Đang gửi request đến GitHub API: {self.__url_add_comment}")
+        Log.print_yellow(f"Request body: {body}")
 
         response = requests.post(self.__url_add_comment, json=body, headers=headers)
 
         if response.status_code in [200, 201]:
+            Log.print_green("Comment đã được post thành công!")
             return response.json()
         else:
+            Log.print_red(f"Lỗi khi gửi comment: {response.status_code} - {response.text}")
             raise RepositoryError(f"Error with line comment {response.status_code} : {response.text}")
+
 
     def post_comment_general(self, text, commit_id=None):
         headers = self.__header_accept_json | self.__header_authorization

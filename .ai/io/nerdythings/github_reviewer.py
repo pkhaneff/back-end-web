@@ -125,9 +125,12 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
     comments = AiBot.split_ai_response(response, file_diffs, total_lines_in_code)
 
     existing_comments = github.get_comments()
-    existing_comment_bodies = {comment['body'] for comment in existing_comments}
+    Log.print_yellow(f"Existing comments: {existing_comments}")
 
     latest_commit_id = github.get_latest_commit_id()
+    Log.print_yellow(f"Latest commit ID: {latest_commit_id}")
+
+    existing_comment_bodies = {comment['body'] for comment in existing_comments}
 
     for comment in comments:
         if comment.line == 0:
@@ -137,15 +140,17 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
         if comment.text.strip() not in existing_comment_bodies:
             Log.print_yellow(f"Posting comment to line {comment.line}: {comment.text.strip()}")
             try:
-                github.post_comment_to_line(
+                response = github.post_comment_to_line(
                     text=comment.text.strip(),
                     commit_id=latest_commit_id,
                     file_path=file,
                     line=comment.line
                 )
-                Log.print_yellow(f"Posted review comment to line {comment.line}: {comment.text.strip()}")
+                Log.print_yellow(f"GitHub API Response: {response}")
             except RepositoryError as e:
                 Log.print_red(f"Failed to post review comment: {e}")
+            except Exception as e:
+                Log.print_red(f"Unexpected error: {e}")
         else:
             Log.print_yellow(f"Skipping comment: Comment already exists")
 

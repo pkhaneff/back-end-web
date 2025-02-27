@@ -6,7 +6,7 @@ import jwt from 'jsonwebtoken'
 export const signup = async (req, res, next) => {
     const { username, email, password} = req.body
 
-    if(!username ! email || !password || username === '' || password ==='' || email === ''){
+    if(!username || ! email || !password || username === '' || password ==='' || email === ''){
         next(errorHandler(400, 'All fields are required'))
     }
 
@@ -26,7 +26,7 @@ export const signup = async (req, res, next) => {
     }
 }
 
-export const = async (req, res, next) => {
+export const signin = async (req, res, next) => {
     const {email, password} = req.body
 
     if(!email || !password || email === '' || password === ''){
