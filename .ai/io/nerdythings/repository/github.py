@@ -12,7 +12,7 @@ class GitHub(Repository):
         self.repo_name = repo_name
         self.pull_number = pull_number
         self.__header_accept_json = {"Authorization": f"token {token}",
-                                      "Accept": "application/vnd.github+json"}  # Bỏ header thừa
+                                      "Accept": "application/vnd.github+json"}
         self.__header_authorization = {"Accept": "application/vnd.github.v3+json"}
         self.__url_add_comment = f"https://api.github.com/repos/{repo_owner}/{repo_name}/pulls/{pull_number}/comments"
         self.__url_add_issue = f"https://api.github.com/repos/{repo_owner}/{repo_name}/issues/{pull_number}/comments"
@@ -40,15 +40,8 @@ class GitHub(Repository):
         else:
             raise RepositoryError(f"Error fetching comments {response.status_code}: {response.text}")
 
-    def post_comment_to_line(self, text: str, commit_id: str, file_path: str, line: int):
-        """Đăng comment lên một dòng cụ thể trong pull request."""
-
-        # No longer needed.
-        # diff_hunk = self._get_diff_hunk_for_line(file_path, line)
-        
-        # if not diff_hunk:
-        #     Log.print_red(f"Không tìm thấy diff hunk cho file: {file_path}, line: {line}")
-        #     return  
+    def post_comment_to_line(self, text: str, commit_id: str, file_path: str, line: str):
+        """Đăng comment lên một dòng cụ thể (diff) trong pull request."""
 
         headers = {**self.__header_accept_json, **self.__header_authorization}
 
@@ -56,7 +49,7 @@ class GitHub(Repository):
             "body": text,
             "commit_id": commit_id,
             "path": file_path,
-            "position": line  # Line number is required.
+            "position": 1, # Dummy value, API doesn't support diff as position but requires a number
         }
 
         Log.print_yellow(f"Đang gửi request đến GitHub API: {self.__url_add_comment}")
@@ -70,7 +63,6 @@ class GitHub(Repository):
         else:
             Log.print_red(f"Lỗi khi gửi comment: {response.status_code} - {response.text}")
             raise RepositoryError(f"Error with line comment {response.status_code} : {response.text}")
-
 
     def post_comment_general(self, text, commit_id=None):
         headers = self.__header_accept_json | self.__header_authorization
