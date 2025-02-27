@@ -1,9 +1,8 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 import re
-from ai.line_comment import LineComment  # Đảm bảo import class LineComment
+from ai.line_comment import LineComment
 
-
-class AiBot(ABC):
+class AiBot:
 
     __no_response = "No critical issues found"
     __problems = "errors, security issues, performance bottlenecks, or bad practices"
@@ -42,9 +41,7 @@ class AiBot(ABC):
         *   The review **MUST** be based solely on the provided `diffs`. If there are no issues within the `diffs`, then respond with "{no_response}".
     """
 
-    @abstractmethod
-    def ai_request_diffs(self, code, diffs) -> str:
-        pass
+    
 
     @staticmethod
     def build_ask_text(code, diffs) -> str:
@@ -82,41 +79,44 @@ class AiBot(ABC):
         target = AiBot.__no_response.replace(" ", "")
         source_no_spaces = source.replace(" ", "")
         return source_no_spaces.startswith(target)
+    
+    @abstractmethod
+    def ai_request_diffs(self, code, diffs) -> str:
+        pass
 
     @staticmethod
     def split_ai_response(input, diffs) -> list[LineComment]:
-        """
-        Chia AI response thành danh sách comment, mỗi comment chứa diff (code thay đổi)
-        gây ra lỗi và thông tin về lỗi đó.
-        """
+        """Chia AI response thành danh sách comment, mỗi comment chứa 1 lỗi."""
         if not input:
             return []
 
         comments = []
-        entries = re.split(r"###", input.strip())
+        # Regex để tìm từng lỗi
+        error_regex = re.compile(
+            r"\*\*\[(Error|Warning|Critical)\] - \[(.*?)\] - \[(.*?)\] - (.*?)", re.DOTALL
+        )
+        # Tìm tất cả các lỗi trong input
+        error_matches = error_regex.finditer(input)
 
-        for entry in entries:
-            entry = entry.strip()
-            if not entry:
-                continue
+        for match in error_matches:
+            severity = match.group(1)
+            issue_type = match.group(2)
+            description = match.group(3)
+            full_error = match.group(0)  # Lấy toàn bộ thông tin lỗi
 
-            match = re.match(r"\s*\[ERROR\]\s*-\s*\[(Warning|Error|Critical)\]\s*-\s*\[(.*?)\]\s*-\s*(.*)", entry)
-            if match:
-                severity, issue_type, description = match.groups()
+            # Tìm code và suggested fix cho lỗi hiện tại
+            code_match = re.search(r"Code:\s*```diff\s*(.*?)\s*```", full_error, re.DOTALL)
+            code = code_match.group(1).strip() if code_match else ""
 
-                code_match = re.search(r"Code:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
-                code = code_match.group(1).strip() if code_match else ""
+            fix_match = re.search(r"Suggested Fix:\s*```diff\s*(.*?)\s*```", full_error, re.DOTALL)
+            suggested_fix = fix_match.group(1).strip() if fix_match else ""
 
-                fix_match = re.search(r"Suggested Fix:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
-                suggested_fix = fix_match.group(1).strip() if fix_match else ""
+            # Tạo comment
+            comment_text = f"**[{severity}] - [{issue_type}] - {description.strip()}**\n\n"
+            comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
+            if suggested_fix:
+                comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
 
-                comment_text = f"**[ERROR] - [{severity}] - [{issue_type}] - {description.strip()}**\n\n"
-                comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
-                if suggested_fix:
-                    comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
-
-                comments.append(LineComment(line="", text=comment_text))
-            else:
-                comments.append(LineComment(line="", text=entry))
+            comments.append(LineComment(line="", text=comment_text))
 
         return comments

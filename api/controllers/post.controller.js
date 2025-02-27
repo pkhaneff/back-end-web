@@ -5,7 +5,7 @@ export const create = async (req, res, next) => {
     if(!req.user.isAdmin){
         return next(errorHandler(403, 'You are not allowed to create a post'))
     }
-    if(!req.body.title !req.body.content) {
+    if(!req.body.title || !req.body.content) {
         return next(errorHandler(400, 'Please provide all required fields'))
     }
     
@@ -21,7 +21,7 @@ export const create = async (req, res, next) => {
     }
 }
 
-export const = async (req, res, next) => {
+export const getpost = async (req, res, next) => {
     try {
       const startIndex = parseInt(req.query.startIndex) || 0;
       const limit = parseInt(req.query.limit) || 9;

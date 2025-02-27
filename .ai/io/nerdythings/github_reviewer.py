@@ -129,17 +129,3 @@ def process_file(file, ai, github, vars):
                         Log.print_yellow(f"Skipping comment: Comment already exists")
                 else:
                     Log.print_yellow(f"Skipping comment because no content.")
-
-def parse_ai_suggestions(response):
-    if not response:
-        return []
-
-    suggestions = []
-    for suggestion_text in response.split("\n\n"):
-        suggestion_text = suggestion_text.strip()
-        if suggestion_text:
-            suggestions.append({"text": suggestion_text})
-    return suggestions
-
-if __name__ == "__main__":
-    main()
