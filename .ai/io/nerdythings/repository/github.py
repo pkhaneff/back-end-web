@@ -40,30 +40,6 @@ class GitHub(Repository):
         else:
             raise RepositoryError(f"Error fetching comments {response.status_code}: {response.text}")
 
-    def post_comment_to_line(self, text: str, commit_id: str, file_path: str, line=None):  # Line is not used
-        """Đăng comment lên pull request."""
-
-        headers = {**self.__header_accept_json, **self.__header_authorization}
-
-        body = {
-            "body": text,  # All content goes in body
-            "commit_id": commit_id,
-            "path": file_path,
-            # "position": 1  # No position needed, posting a general comment now
-        }
-
-        Log.print_yellow(f"Đang gửi request đến GitHub API: {self.__url_add_comment}")
-        Log.print_yellow(f"Request body: {body}")
-
-        response = requests.post(self.__url_add_comment, json=body, headers=headers)
-
-        if response.status_code in [200, 201]:
-            Log.print_green("Comment đã được post thành công!")
-            return response.json()
-        else:
-            Log.print_red(f"Lỗi khi gửi comment: {response.status_code} - {response.text}")
-            raise RepositoryError(f"Error with line comment {response.status_code} : {response.text}")
-
     def post_comment_general(self, text):
         headers = self.__header_accept_json | self.__header_authorization
         body = {"body": text}
