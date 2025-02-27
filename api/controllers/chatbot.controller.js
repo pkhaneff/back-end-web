@@ -2,7 +2,7 @@ import Chatbot from "../models/chatbot.model.js"
 import Prompt from "../models/prompt.model.js"
 import { errorHandler } from "../utils/error.js"
 
-export const importdata = async (req, res, next) => {
+export const = async (req, res, next) => {
     if(!req.user.isAdmin){
         return next(errorHandler(403, 'You are not allowed to import data'))
     }
@@ -20,7 +20,7 @@ export const importdata = async (req, res, next) => {
     }
 }
 
-export const = async (req, res, next) => {
+export const getdata = async (req, res, next) => {
     if(!req.user.isAdmin) return next(errorHandler(403,'You are not allowed to get all data chatbot'))
     try {
         const chatbots = await Chatbot.find();
