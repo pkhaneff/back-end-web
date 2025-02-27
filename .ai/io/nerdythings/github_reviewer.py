@@ -101,27 +101,25 @@ def process_file(file, ai, github, vars, reviewed_files):
         Log.print_red(f"No diffs found for: {file}")
         return
 
-    # Split diffs into individual chunks/changes
     individual_diffs = Git.split_diff_into_chunks(file_diffs)
 
     for diff_chunk in individual_diffs:
         Log.print_green(f"AI analyzing changes in {file}...")
-        response = ai.ai_request_diffs(code=file_content, diffs=diff_chunk)  # review each change.
+        response = ai.ai_request_diffs(code=file_content, diffs=diff_chunk) 
 
-        # Send diff chunk to handle_ai_response
-        handle_ai_response(response, github, file, diff_chunk, reviewed_files, vars)
+        process_ai_response(response, github, file, diff_chunk, vars)
 
     reviewed_files.add(file)
 
-def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars):
+def process_ai_response(response, github, file, diff_chunk, vars):
     """
-    Xử lý phản hồi từ AI, kiểm tra lỗi, và đăng comment lên GitHub nếu có.
+    Processes the AI response for a single diff chunk and posts a comment to GitHub if needed.
     """
     if not response or AiBot.is_no_issues_text(response):
-        Log.print_green(f"No issues detected in {file}.")
-        return  # Skip posting
+        Log.print_green(f"No issues detected in this diff chunk of {file}.")
+        return
 
-    comments = AiBot.split_ai_response(response, file_diffs)
+    comments = AiBot.split_ai_response(response, diff_chunk)
 
     existing_comments = github.get_comments()
     Log.print_yellow(f"Existing comments: {existing_comments}")
@@ -132,26 +130,28 @@ def handle_ai_response(response, github, file, file_diffs, reviewed_files, vars)
     existing_comment_bodies = {comment['body'] for comment in existing_comments}
 
     for comment in comments:
-        if not comment.line:  # If comment.line is empty string, skip
+        if not comment.line:
             Log.print_yellow(f"Skipping comment because no diff: {comment.text}")
             continue
-        
-        if comment.text.strip() not in existing_comment_bodies:
-            Log.print_yellow(f"Posting comment:\n{comment.text.strip()}")
+
+        full_comment_text = f"{comment.line}\n{comment.text.strip()}"  
+
+        if full_comment_text not in existing_comment_bodies: 
+            Log.print_yellow(f"Posting comment to diff:\n{full_comment_text}")
             try:
-                response = github.post_comment_to_line(
-                    text=comment.text.strip(),
+                github.post_comment_to_line(
+                    text=comment.text.strip(), 
                     commit_id=latest_commit_id,
                     file_path=file,
-                    line=comment.line  # Send the actual diff for the comment.
+                    line=comment.line
                 )
-                Log.print_yellow(f"GitHub API Response: {response}")
             except RepositoryError as e:
                 Log.print_red(f"Failed to post review comment: {e}")
             except Exception as e:
                 Log.print_red(f"Unexpected error: {e}")
         else:
             Log.print_yellow(f"Skipping comment: Comment already exists")
+
 
 def parse_ai_suggestions(response):
     if not response:
