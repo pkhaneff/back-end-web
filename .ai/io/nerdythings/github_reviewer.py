@@ -11,6 +11,7 @@ from repository.repository import RepositoryError
 PR_SUMMARY_COMMENT_IDENTIFIER = "<!-- PR SUMMARY COMMENT -->"
 EXCLUDED_FOLDERS = {".ai/io/nerdythings", ".github/workflows"}
 
+
 def main():
     vars = EnvVars()
     vars.check_vars()
@@ -40,9 +41,9 @@ def main():
 
     update_pr_summary(changed_files, ai, github)
 
-    reviewed_files = set()
     for file in changed_files:
-        process_file(file, ai, github, vars, reviewed_files)
+        process_file(file, ai, github, vars)
+
 
 def update_pr_summary(changed_files, ai, github):
     Log.print_green("Updating PR description...")
@@ -83,11 +84,8 @@ def update_pr_summary(changed_files, ai, github):
     except RepositoryError as e:
         Log.print_red(f"Failed to update PR description: {e}")
 
-def process_file(file, ai, github, vars, reviewed_files):
-    if file in reviewed_files:
-        Log.print_green(f"Skipping file {file} as it has already been reviewed.")
-        return
 
+def process_file(file, ai, github, vars):
     Log.print_green(f"Reviewing file: {file}")
     try:
         with open(file, 'r', encoding="utf-8", errors="replace") as f:
@@ -111,10 +109,10 @@ def process_file(file, ai, github, vars, reviewed_files):
         # Process AI response and post comment immediately
         if response and not AiBot.is_no_issues_text(response):
             comments = AiBot.split_ai_response(response, diff_chunk)
+            existing_comments = github.get_comments()
+            existing_comment_bodies = {c['body'] for c in existing_comments}
             for comment in comments:  # Process each comment separately
                 if comment.text:
-                    existing_comments = github.get_comments()
-                    existing_comment_bodies = {c['body'] for c in existing_comments}
 
                     comment_text = comment.text.strip()
                     if comment_text not in existing_comment_bodies:
@@ -131,8 +129,6 @@ def process_file(file, ai, github, vars, reviewed_files):
                         Log.print_yellow(f"Skipping comment: Comment already exists")
                 else:
                     Log.print_yellow(f"Skipping comment because no content.")
-
-    reviewed_files.add(file)
 
 def parse_ai_suggestions(response):
     if not response:
