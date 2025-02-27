@@ -135,12 +135,11 @@ def process_ai_response(response, github, file, diff_chunk, vars):
             continue
 
         if comment.text.strip() not in existing_comment_bodies:
-            Log.print_yellow(f"Posting comment:\n{comment.text.strip()}")
+            Log.print_yellow(f"Posting general comment:\n{comment.text.strip()}")
             try:
-                github.post_comment_to_line(
+                github.post_comment_general(
                     text=comment.text.strip(),  # Full comment content
-                    commit_id=latest_commit_id,
-                    file_path=file
+                    commit_id=latest_commit_id
                 )
             except RepositoryError as e:
                 Log.print_red(f"Failed to post review comment: {e}")
@@ -148,7 +147,6 @@ def process_ai_response(response, github, file, diff_chunk, vars):
                 Log.print_red(f"Unexpected error: {e}")
         else:
             Log.print_yellow(f"Skipping comment: Comment already exists")
-
 
 def parse_ai_suggestions(response):
     if not response:

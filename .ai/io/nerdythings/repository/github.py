@@ -64,11 +64,9 @@ class GitHub(Repository):
             Log.print_red(f"Lỗi khi gửi comment: {response.status_code} - {response.text}")
             raise RepositoryError(f"Error with line comment {response.status_code} : {response.text}")
 
-    def post_comment_general(self, text, commit_id=None):
+    def post_comment_general(self, text):
         headers = self.__header_accept_json | self.__header_authorization
         body = {"body": text}
-        if commit_id:
-            body["commit_id"] = commit_id
 
         response = requests.post(self.__url_add_issue, json=body, headers=headers)
         if response.status_code in [200, 201]:
