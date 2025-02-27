@@ -100,3 +100,83 @@ class GitHub(Repository):
         data = {"body": new_body}
         response = requests.patch(url, json=data, headers=headers)
         return response.json()
+
+    def _get_pull_request_diff(self):
+        """Lấy diff của pull request từ GitHub API."""
+        url = f"https://api.github.com/repos/{self.repo_owner}/{self.repo_name}/pulls/{self.pull_number}"
+        headers = {
+            "Authorization": f"token {self.token}",
+            "Accept": "application/vnd.github.v3.diff"
+        }
+        response = requests.get(url, headers=headers)
+
+        if response.status_code == 200:
+            return response.text
+        else:
+            raise RepositoryError(f"Error getting diff: {response.status_code}")
+
+    def _extract_diff_hunk_for_line(self, file_path, line_number, context_lines=3):
+        """Trích xuất diff hunk chứa dòng cụ thể, với context."""
+
+        diff_text = self._get_pull_request_diff()
+        if not diff_text:
+            return None
+
+        hunk_start_pattern = re.compile(r"@@ -(\d+),?(\d*) \+(\d+),?(\d*) @@")
+        lines = diff_text.splitlines()
+        current_hunk = None
+        hunk_lines = []
+        hunk_start_index = None
+
+        for i, line in enumerate(lines):
+            if line.startswith("diff --git") and file_path not in line:
+                continue
+            elif line.startswith("@@"):
+                match = hunk_start_pattern.match(line)
+                if match:
+                    old_start, old_length, new_start, new_length = match.groups()
+
+                    try:
+                        new_start = int(new_start)
+                        new_length = int(new_length) if new_length else 1
+                    except ValueError:
+                        print(f"Invalid number format in diff hunk: {line}")
+                        return None
+
+                    if new_start <= line_number <= new_start + new_length - 1:
+                        current_hunk = {
+                            "start": new_start,
+                            "lines": []
+                        }
+                        hunk_start_index = i
+                    else:
+                        current_hunk = None
+                    hunk_lines = []
+
+            elif current_hunk is not None:
+                hunk_lines.append(line)
+
+        if current_hunk and hunk_start_index is not None:
+            start_index = max(0, hunk_start_index - context_lines)
+            end_index = min(len(lines), hunk_start_index + len(hunk_lines) + context_lines)
+            context_hunk_lines = lines[start_index:end_index]
+            return "\n".join(context_hunk_lines)
+
+        return None
+
+    def _get_diff_hunk_for_line(self, file_path, line_number):
+      """
+      Lấy diff hunk cho một dòng cụ thể.
+
+      Args:
+          file_path: Đường dẫn tới file.
+          line_number: Số dòng.
+
+      Returns:
+          str: Diff hunk nếu tìm thấy, None nếu không.
+      """
+      try:
+          return self._extract_diff_hunk_for_line(file_path, line_number)
+      except RepositoryError as e:
+          print(f"Lỗi khi lấy diff hunk: {e}")
+          return None
