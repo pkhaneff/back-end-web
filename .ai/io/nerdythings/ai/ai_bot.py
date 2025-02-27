@@ -1,4 +1,3 @@
-from abc import abstractmethod
 import re
 from ai.line_comment import LineComment
 
@@ -79,10 +78,6 @@ class AiBot:
         target = AiBot.__no_response.replace(" ", "")
         source_no_spaces = source.replace(" ", "")
         return source_no_spaces.startswith(target)
-    
-    @abstractmethod
-    def ai_request_diffs(self, code, diffs) -> str:
-        pass
 
     @staticmethod
     def split_ai_response(input, diffs) -> list[LineComment]:
