@@ -108,11 +108,10 @@ def update_pr_summary(changed_files, ai, github):
 
     file_summaries = []
     for file in all_files:
-        error_message = "Không có lỗi"
         try:
             with open(file, 'r', encoding="utf-8", errors="replace") as f:
                 content = f.read()
-                new_summary = ai.ai_request_summary(file_changes={file:content[:1000]}, prompt=SUMMARY_PROMPT.format(file_name=file, file_content=content[:1000], errorHandler=error_message))
+                new_summary = ai.ai_request_summary(file_changes={file:content[:1000]}, prompt=SUMMARY_PROMPT.format(file_name=file, file_content=content[:1000]))
                 file_summaries.append(new_summary)
         except FileNotFoundError:
             Log.print_yellow(f"File not found: {file}")
@@ -142,7 +141,6 @@ def update_pr_summary(changed_files, ai, github):
         Log.print_yellow("PR description updated successfully!")
     except RepositoryError as e:
         Log.print_red(f"Failed to update PR description: {e}")
-
 
 def process_file(file, ai, github, vars):
     Log.print_green(f"Reviewing file: {file}")
