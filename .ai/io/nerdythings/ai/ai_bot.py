@@ -69,6 +69,7 @@ class AiBot(ABC):
             issue_description = "Potential issue in the changed code."
             line_numbers = "N/A"
             changed_lines = "N/A"
+            explanation = "" 
             suggested_fix = ""
         else:
             code_to_review = diffs[0].get("code", "") if isinstance(diffs, list) else diffs.get("code", "")
@@ -77,6 +78,7 @@ class AiBot(ABC):
             issue_description = diffs[0].get("issue_description", "No description") if isinstance(diffs, list) else diffs.get("issue_description", "No description")
             line_numbers = diffs[0].get("line_numbers", "N/A") if isinstance(diffs, list) else diffs.get("line_numbers", "N/A")
             changed_lines = diffs[0].get("changed_lines", "N/A") if isinstance(diffs, list) else diffs.get("changed_lines", "N/A")
+            explanation = diffs[0].get("explanation", "") if isinstance(diffs, list) else diffs.get("explanation", "") # Thêm explanation ở đây
             suggested_fix = diffs[0].get("suggested_fix", "") if isinstance(diffs, list) else diffs.get("suggested_fix", "")
 
         return AiBot.__chat_gpt_ask_long.format(
@@ -85,10 +87,11 @@ class AiBot(ABC):
             diffs=code_to_review,
             code=code,
             severity=severity,
-            type=issue_type,
+            type=type,
             issue_description=issue_description,
             line_numbers = line_numbers, 
-            changed_lines = changed_lines, 
+            changed_lines = changed_lines,
+            explanation = explanation, 
             suggested_fix=suggested_fix
         )
 
