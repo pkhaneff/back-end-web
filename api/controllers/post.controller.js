@@ -21,7 +21,7 @@ export const create = async (req, res, next) => {
     }
 }
 
-export const = async (req, res, next) => {
+export const getpost = async (req, res, next) => {
     try {
       const startIndex = parseInt(req.query.startIndex) || 0;
       const limit = parseInt(req.query.limit) || 9;
@@ -52,7 +52,7 @@ export const = async (req, res, next) => {
         now.getDate()
       );
   
-      const = await Post.countDocuments({
+      const lastMonthPosts = await Post.countDocuments({
         createdAt: { $gte: oneMonthAgo },
       });
   

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import re
 from log import Log
-from ai.line_comment import LineComment  # Đảm bảo import class LineComment
+from ai.line_comment import LineComment
 
 
 class AiBot(ABC):
@@ -28,6 +28,11 @@ class AiBot(ABC):
         Each issue should follow the following Markdown format, resembling a commit log:
 
         **[ERROR] - [{severity}] - [{type}] - {issue_description}**
+
+        **Lines:**
+        ```
+        {line_numbers}: {changed_lines}
+        ```
 
         **:interrobang: Explanation:**
         {explanation}
@@ -62,14 +67,16 @@ class AiBot(ABC):
             severity = "Warning"
             issue_type = "General Issue"
             issue_description = "Potential issue in the changed code."
-            explanation = ""  # Thêm explanation
+            line_numbers = "N/A"
+            changed_lines = "N/A"
             suggested_fix = ""
         else:
             code_to_review = diffs[0].get("code", "") if isinstance(diffs, list) else diffs.get("code", "")
             severity = diffs[0].get("severity", "Warning") if isinstance(diffs, list) else diffs.get("severity", "Warning")
             issue_type = diffs[0].get("type", "General Issue") if isinstance(diffs, list) else diffs.get("type", "General Issue")
             issue_description = diffs[0].get("issue_description", "No description") if isinstance(diffs, list) else diffs.get("issue_description", "No description")
-            explanation = diffs[0].get("explanation", "") if isinstance(diffs, list) else diffs.get("explanation", "")
+            line_numbers = diffs[0].get("line_numbers", "N/A") if isinstance(diffs, list) else diffs.get("line_numbers", "N/A")
+            changed_lines = diffs[0].get("changed_lines", "N/A") if isinstance(diffs, list) else diffs.get("changed_lines", "N/A")
             suggested_fix = diffs[0].get("suggested_fix", "") if isinstance(diffs, list) else diffs.get("suggested_fix", "")
 
         return AiBot.__chat_gpt_ask_long.format(
@@ -80,7 +87,8 @@ class AiBot(ABC):
             severity=severity,
             type=issue_type,
             issue_description=issue_description,
-            explanation=explanation,
+            line_numbers = line_numbers, 
+            changed_lines = changed_lines, 
             suggested_fix=suggested_fix
         )
 
@@ -91,8 +99,7 @@ class AiBot(ABC):
         return source_no_spaces.startswith(target)
 
     @staticmethod
-    def split_ai_response(input, diffs, file_path=""):
-        Log.print_yellow(f"AI Response inside split_ai_response: {input}")
+    def split_ai_response(input, diffs, file_path="") -> list[LineComment]:
         if not input:
             return []
 
@@ -111,8 +118,9 @@ class AiBot(ABC):
             if match:
                 severity, issue_type, description = match.groups()
 
-                explanation_match = re.search(r"Explanation:\s*(.*?)\s*Code:", entry, re.DOTALL) 
-                explanation = explanation_match.group(1).strip() if explanation_match else ""
+                lines_match = re.search(r"Lines:\s*```\s*([\s\S]*?)\s*```", entry)
+                lines_info = lines_match.group(1).strip() if lines_match else ""
+
 
                 code_match = re.search(r"Code:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
                 code = code_match.group(1).strip() if code_match else ""
@@ -121,9 +129,10 @@ class AiBot(ABC):
                 suggested_fix = fix_match.group(1).strip() if fix_match else ""
 
                 comment_text += f"**[ERROR] - [{severity}] - [{issue_type}] - {description.strip()}**\n\n"
-                if explanation:
-                    comment_text += f"**Explanation:**\n{explanation}\n\n"
-                    comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
+                if lines_info:
+                    comment_text += f"**Lines:**\n```\n{lines_info}\n```\n\n"
+
+                comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
                 if suggested_fix:
                     comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
 
