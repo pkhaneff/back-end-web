@@ -43,7 +43,7 @@ class AiBot(ABC):
         {suggested_fix}
         ```
 
-        **Important Notes:**
+        **:pushpin:Important Notes:**
         *   The review **MUST** be based solely on the provided `diffs`. If there are no issues within the `diffs`, then respond with "{no_response}".
     """
 
@@ -113,11 +113,11 @@ class AiBot(ABC):
 
             comment_text = f"**File:** {file_path}\n\n"
 
-            match = re.match(r"\s*\[ERROR\]\s*-\s*\[(Warning|Error|Critical)\]\s*-\s*\[(.*?)\]\s*-\s*(.*)", entry)
+            match = re.match(r"\s*\[:x:ERROR\]\s*-\s*\[(:warning:Warning|:x:Error|:bangbang:Critical)\]\s*-\s*\[(.*?)\]\s*-\s*(.*)", entry)
             if match:
                 severity, issue_type, description = match.groups()
 
-                lines_match = re.search(r"Lines:\s*```\s*([\s\S]*?)\s*```", entry)
+                lines_match = re.search(r":point_right:Lines:\s*```\s*([\s\S]*?)\s*```", entry)
                 lines_info = lines_match.group(1).strip() if lines_match else ""
 
                 fix_match = re.search(r":white_check_mark: Suggested Fix \(if applicable\):\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
