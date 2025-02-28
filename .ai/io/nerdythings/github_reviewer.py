@@ -77,7 +77,15 @@ def update_pr_summary(changed_files, ai, github):
         )
     else:
         updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## PR Summary\n\n{new_summary}\n\n{current_body}"
-saveData
+
+    try:
+        github.update_pull_request(updated_body)
+        Log.print_yellow("PR description updated successfully!")
+    except RepositoryError as e:
+        Log.print_red(f"Failed to update PR description: {e}")
+
+
+def process_file(file, ai, github, vars):  # Bỏ thụt lề ở đây
     Log.print_green(f"Reviewing file: {file}")
     try:
         with open(file, 'r', encoding="utf-8", errors="replace") as f:
@@ -122,6 +130,7 @@ saveData
                 else:
                     Log.print_yellow(f"Skipping comment because no content.")
 
+
 def parse_ai_suggestions(response):
     if not response:
         return []
@@ -132,6 +141,7 @@ def parse_ai_suggestions(response):
         if suggestion_text:
             suggestions.append({"text": suggestion_text})
     return suggestions
+
 
 if __name__ == "__main__":
     main()
