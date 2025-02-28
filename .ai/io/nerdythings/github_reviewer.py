@@ -8,6 +8,9 @@ from ai.ai_bot import AiBot
 from env_vars import EnvVars
 from repository.github import GitHub
 from repository.repository import RepositoryError
+import sys
+print(sys.executable)
+print(sys.path)
 
 PR_SUMMARY_COMMENT_IDENTIFIER = "<!-- PR SUMMARY COMMENT -->"
 EXCLUDED_FOLDERS = {".ai/io/nerdythings", ".github/workflows"}

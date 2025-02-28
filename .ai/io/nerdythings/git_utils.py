@@ -27,32 +27,32 @@ class GitUtils:
     @staticmethod
     def get_remote_name() -> str:
         command = ["git", "remote", "-v"]
-        result = Git.__run_subprocess(command)
+        result = GitUtils.__run_subprocess(command)
         lines = result.strip().splitlines()
         return lines[0].split()[0] if lines else "origin"
 
     @staticmethod
     def get_last_commit_sha(file: str) -> str:
         command = ["git", "log", "-1", "--format=%H", "--", file]
-        result = Git.__run_subprocess(command)
+        result = GitUtils.__run_subprocess(command)
         lines = result.strip().splitlines()
         return lines[0] if lines else ""
 
     @staticmethod
     def get_diff_files(base_ref: str, head_ref: str) -> List[str]:
-        remote_name = Git.get_remote_name()
-        base = base_ref if Git.is_sha(base_ref) else f"{remote_name}/{base_ref}"
-        head = head_ref if Git.is_sha(head_ref) else f"{remote_name}/{head_ref}"
+        remote_name = GitUtils.get_remote_name()
+        base = base_ref if GitUtils.is_sha(base_ref) else f"{remote_name}/{base_ref}"
+        head = head_ref if GitUtils.is_sha(head_ref) else f"{remote_name}/{head_ref}"
 
         command = ["git", "diff", "--name-only", base, head]
-        result = Git.__run_subprocess(command)
+        result = GitUtils.__run_subprocess(command)
         return result.strip().splitlines()
 
     @staticmethod
     def get_diff_in_file(base_ref: str, head_ref: str, file_path: str) -> str:
-        remote_name = Git.get_remote_name()
-        base = base_ref if Git.is_sha(base_ref) else f"{remote_name}/{base_ref}"
-        head = head_ref if Git.is_sha(head_ref) else f"{remote_name}/{head_ref}"
+        remote_name = GitUtils.get_remote_name()
+        base = base_ref if GitUtils.is_sha(base_ref) else f"{remote_name}/{base_ref}"
+        head = head_ref if GitUtils.is_sha(head_ref) else f"{remote_name}/{head_ref}"
 
         command = ["git", "diff", base, head, "--", file_path]
-        return Git.__run_subprocess(command)
+        return GitUtils.__run_subprocess(command)
