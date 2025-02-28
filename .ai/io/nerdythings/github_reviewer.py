@@ -1,6 +1,7 @@
 import os
 import re
 import git
+import json
 from git_utils import GitUtils
 from ai.chat_gpt import ChatGPT
 from log import Log
@@ -8,12 +9,10 @@ from ai.ai_bot import AiBot
 from env_vars import EnvVars
 from repository.github import GitHub
 from repository.repository import RepositoryError
-import sys
-print(sys.executable)
-print(sys.path)
+
 
 PR_SUMMARY_COMMENT_IDENTIFIER = "<!-- PR SUMMARY COMMENT -->"
-PR_SUMMARY_FILES_IDENTIFIER = "<!-- PR SUMMARY FILES -->"  # Identifier cho comment chứa danh sách file
+PR_SUMMARY_FILES_IDENTIFIER = "<!-- PR SUMMARY FILES -->" 
 EXCLUDED_FOLDERS = {".ai/io/nerdythings", ".github/workflows"}
 from ai.prompts import SUMMARY_PROMPT
 
