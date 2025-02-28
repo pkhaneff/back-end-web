@@ -17,7 +17,7 @@ export const updateUser = async ( req, res, next ) => {
         req.body.password = bcryptjs.hashSync(req.body.password, 10)
     }
     if(req.body.username){
-        if(req.body.username.length < 7 req.body.username.length > 20) {
+        if(req.body.username.length < 7 || req.body.username.length > 20) {
             return next(errorHandler(400, 'Username must be between 7 and 20 characters'))
         }
         if(req.body.username.includes(' ')){
@@ -31,7 +31,7 @@ export const updateUser = async ( req, res, next ) => {
         }
     }
     try {
-        const  = await User.findByIdAndUpdate(req.params.userId, {
+        const updatedUser = await User.findByIdAndUpdate(req.params.userId, {
             $set:{
                 username: req.body.username,
                 email: req.body.email,

@@ -21,7 +21,7 @@ export const createcomment = async (req, res, next) => {
     }
 }
 
-export const = async (req, res, next) => {
+export const getpostcomment = async (req, res, next) => {
     try {
         const comments = await Comment.find({postId: req.params.postId}).sort({createdAt: -1})
         res.status(200).json(comments)
@@ -51,13 +51,13 @@ export const likeComment = async (req, res, next) => {
     }
   };
 
-export const = async (req, res, next) => {
+export const editComment = async (req, res, next) => {
   try {
     const comment = await Comment.findById(req.params.commentId)
     if (!comment) {
       return next(errorHandler(404, 'Comment not found'));
     }
-    if(comment.userId ! req.user.id && !req.user.isAdmin){
+    if(comment.userId !== req.user.id && !req.user.isAdmin){
       return next(errorHandler(403, 'You are not allowed to edit this comment'))
     }
 
