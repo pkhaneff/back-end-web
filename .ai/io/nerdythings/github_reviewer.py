@@ -10,12 +10,10 @@ from env_vars import EnvVars
 from repository.github import GitHub
 from repository.repository import RepositoryError
 import sys
-import json  # Thêm dòng này
-print(sys.executable)
-print(sys.path)
+import json
 
 PR_SUMMARY_COMMENT_IDENTIFIER = "<!-- PR SUMMARY COMMENT -->"
-PR_SUMMARY_FILES_IDENTIFIER = "<!-- PR SUMMARY FILES -->"  # Identifier cho comment chứa danh sách file
+PR_SUMMARY_FILES_IDENTIFIER = "<!-- PR SUMMARY FILES -->"
 EXCLUDED_FOLDERS = {".ai/io/nerdythings", ".github/workflows"}
 
 def main():
@@ -54,10 +52,22 @@ def generate_summary_table(all_files, file_summaries):
     """Tạo bảng PR Summary dưới dạng chuỗi Markdown."""
     table_header = "| Files | Change Summary |\n|---|---|"
     table_rows = []
+
+    print(f"Debug: all_files = {all_files}")  # Debugging
+    print(f"Debug: file_summaries = {file_summaries}")  # Debugging
+
+    if len(all_files) != len(file_summaries):
+        Log.print_red("Error: all_files and file_summaries have different lengths!")
+        return "Error: Mismatched file and summary counts."
+
     for file, summary in zip(all_files, file_summaries):
-        row = f"| {file} | {summary} |"
+        # Escape Markdown special characters
+        file_escaped = file.replace("|", "\\|").replace("*", "\\*").replace("_", "\\_")
+        summary_escaped = summary.replace("|", "\\|").replace("*", "\\*").replace("_", "\\_")
+
+        row = f"| {file_escaped} | {summary_escaped} |"
         table_rows.append(row)
-        print(f"Debug: Row = {row}")
+        print(f"Debug: Row = {row}") # In ra từng hàng để kiểm tra
     return "\n".join([table_header] + table_rows)
 
 def update_pr_summary(changed_files, ai, github):
@@ -66,7 +76,6 @@ def update_pr_summary(changed_files, ai, github):
     pr_data = github.get_pull_request()
     current_body = pr_data.get("body") or ""
 
-    # Đọc danh sách file đã lưu trữ từ comment
     existing_files = []
     match = re.search(f"{PR_SUMMARY_FILES_IDENTIFIER}(.*){PR_SUMMARY_FILES_IDENTIFIER}", current_body, re.DOTALL)
     if match:
@@ -76,33 +85,28 @@ def update_pr_summary(changed_files, ai, github):
             Log.print_red("Error decoding existing files list. Resetting list.")
             existing_files = []
 
-    # Kết hợp danh sách file hiện tại với danh sách đã lưu trữ
     all_files = list(set(changed_files + existing_files))
 
-    # Tạo nội dung tóm tắt cho tất cả các file
     file_summaries = []
     for file in all_files:
         try:
             with open(file, 'r', encoding="utf-8", errors="replace") as f:
                 content = f.read()
-                # Tạo prompt cho ChatGPT
-                #prompt = SUMMARY_PROMPT.format(file_name=file, file_content=content[:1000])
-                # Gọi ChatGPT để tạo summary cho file
                 new_summary = ai.ai_request_summary(file_changes={file:content[:1000]}, prompt=SUMMARY_PROMPT)
                 file_summaries.append(new_summary)
         except FileNotFoundError:
             Log.print_yellow(f"File not found: {file}")
-            file_summaries.append(f"File not found: {file}")  # Thêm thông báo lỗi vào summary
+            file_summaries.append(f"File not found: {file}")
+        except Exception as e:
+            Log.print_red(f"Error processing file {file}: {e}")
+            file_summaries.append(f"Error processing file {file}: {e}")
 
-    # Tạo bảng PR Summary
-    print(f"all_files: {all_files}") 
+    print(f"all_files: {all_files}")
     print(f"file_summaries: {file_summaries}")
     summary_table = generate_summary_table(all_files, file_summaries)
 
-    # Tạo comment chứa danh sách file
     files_comment = f"{PR_SUMMARY_FILES_IDENTIFIER}{json.dumps(all_files)}{PR_SUMMARY_FILES_IDENTIFIER}"
 
-    # Cập nhật PR body với bảng PR Summary và comment
     if PR_SUMMARY_COMMENT_IDENTIFIER in current_body:
         updated_body = re.sub(
             f"{PR_SUMMARY_COMMENT_IDENTIFIER}.*",
@@ -199,7 +203,7 @@ def process_file(file, ai, github, vars):
                     Log.print_yellow(f"Skipping comment because no content.")
         else:
             Log.print_green(f"No critical issues found in diff chunk, skipping comments.")
-            continue 
+            continue
 
 
 def parse_ai_suggestions(response):
