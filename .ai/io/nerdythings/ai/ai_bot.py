@@ -79,7 +79,7 @@ class AiBot(ABC):
             severity=severity,
             type=issue_type,
             issue_description=issue_description,
-            explanation=explanation, # Truyền explanation vào prompt
+            explanation=explanation,
             suggested_fix=suggested_fix
         )
 
@@ -90,11 +90,8 @@ class AiBot(ABC):
         return source_no_spaces.startswith(target)
 
     @staticmethod
-    def split_ai_response(input, diffs, file_path="") -> list[LineComment]:
-        """
-        Chia AI response thành danh sách comment, mỗi comment chứa diff (code thay đổi)
-        gây ra lỗi và thông tin về lỗi đó. Thêm file_path vào đầu mỗi comment và gạch ngang phân tách.
-        """
+    def split_ai_response(input, diffs, file_path=""):
+        Log.print_yellow(f"AI Response inside split_ai_response: {input}")
         if not input:
             return []
 
@@ -113,7 +110,7 @@ class AiBot(ABC):
             if match:
                 severity, issue_type, description = match.groups()
 
-                explanation_match = re.search(r"Explanation:\s*(.*?)\s*Code:", entry, re.DOTALL) # Tìm explanation trước Code
+                explanation_match = re.search(r"Explanation:\s*(.*?)\s*Code:", entry, re.DOTALL) 
                 explanation = explanation_match.group(1).strip() if explanation_match else ""
 
                 code_match = re.search(r"Code:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
@@ -124,7 +121,7 @@ class AiBot(ABC):
 
                 comment_text += f"**[ERROR] - [{severity}] - [{issue_type}] - {description.strip()}**\n\n"
                 if explanation:
-                   comment_text += f"**Explanation:**\n{explanation}\n\n" # Thêm explanation vào comment
+                comment_text += f"**Explanation:**\n{explanation}\n\n"
                 comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
                 if suggested_fix:
                     comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
