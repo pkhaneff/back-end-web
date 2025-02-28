@@ -1,7 +1,6 @@
 import os
 import re
 import git
-import json
 from git_utils import GitUtils
 from ai.chat_gpt import ChatGPT
 from log import Log
@@ -9,10 +8,13 @@ from ai.ai_bot import AiBot
 from env_vars import EnvVars
 from repository.github import GitHub
 from repository.repository import RepositoryError
-
+import sys
+import json  # Thêm dòng này
+print(sys.executable)
+print(sys.path)
 
 PR_SUMMARY_COMMENT_IDENTIFIER = "<!-- PR SUMMARY COMMENT -->"
-PR_SUMMARY_FILES_IDENTIFIER = "<!-- PR SUMMARY FILES -->" 
+PR_SUMMARY_FILES_IDENTIFIER = "<!-- PR SUMMARY FILES -->"  # Identifier cho comment chứa danh sách file
 EXCLUDED_FOLDERS = {".ai/io/nerdythings", ".github/workflows"}
 from ai.prompts import SUMMARY_PROMPT
 
@@ -65,10 +67,10 @@ def main():
     for file in changed_files:
         process_file(file, ai, github, vars)
 
-def generate_summary_table(changed_files, file_summaries):
+def generate_summary_table(all_files, file_summaries):
     """Tạo bảng PR Summary dưới dạng chuỗi Markdown."""
     table_header = "| Files | Change Summary |\n|---|---|"
-    table_rows = [f"| {file} | {summary} |" for file, summary in zip(changed_files, file_summaries)]
+    table_rows = [f"| {file} | {summary} |" for file, summary in zip(all_files, file_summaries)]
     return "\n".join([table_header] + table_rows)
 
 def update_pr_summary(changed_files, ai, github):
@@ -90,6 +92,7 @@ def update_pr_summary(changed_files, ai, github):
     # Kết hợp danh sách file hiện tại với danh sách đã lưu trữ
     all_files = list(set(changed_files + existing_files))
 
+    # Tạo nội dung tóm tắt cho tất cả các file
     file_summaries = []
     for file in all_files:
         try:
