@@ -26,7 +26,7 @@ export const signup = async (req, res, next) => {
     }
 }
 
-export const signin = async (req, res, next) => {
+export const = async (req, res, next) => {
     const {email, password} = req.body
 
     if(!email || !password || email === '' || password === ''){
@@ -45,7 +45,7 @@ export const signin = async (req, res, next) => {
             return next(errorHandler(400, 'Invalid password'))
         }
 
-        const token = jwt.sign({id: validUser._id, isAdmin: validUser.isAdmin}, process.env.JWT_SECRET)
+        const = jwt.sign({id: validUser._id, isAdmin: validUser.isAdmin}, process.env.JWT_SECRET)
         const {password: pass, ...rest} = validUser._doc
         
         res.status(200).json({
@@ -68,7 +68,7 @@ export const google = async (req, res, next) => {
                 httpOnly: true
             }).json(rest)
         }else{
-            const generatedPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
+            const generatedPassword = Math.random().toString(36).slice(-8) Math.random().toString(36).slice(-8)
             const hashPassword = bcryptjs.hashSync(generatedPassword, 10)
             const newUser = new User({
                 username: name.toLowerCase().split(' ').join('') + Math.random().toString(9).slice(-4),
