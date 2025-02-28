@@ -1,12 +1,16 @@
 import os
 import re
-from git import Git
+import git
+from git_utils import GitUtils
 from ai.chat_gpt import ChatGPT
 from log import Log
 from ai.ai_bot import AiBot
 from env_vars import EnvVars
 from repository.github import GitHub
 from repository.repository import RepositoryError
+import sys
+print(sys.executable)
+print(sys.path)
 
 PR_SUMMARY_COMMENT_IDENTIFIER = "<!-- PR SUMMARY COMMENT -->"
 EXCLUDED_FOLDERS = {".ai/io/nerdythings", ".github/workflows"}
@@ -23,7 +27,7 @@ def main():
     github = GitHub(vars.token, vars.owner, vars.repo, vars.pull_number)
     ai = ChatGPT(vars.chat_gpt_token, vars.chat_gpt_model)
 
-    changed_files = Git.get_diff_files(head_ref=vars.head_ref, base_ref=vars.base_ref)
+    changed_files = GitUtils.get_diff_files(head_ref=vars.head_ref, base_ref=vars.base_ref)
     if not changed_files:
         Log.print_red("No changes detected.")
         return
@@ -94,24 +98,48 @@ def process_file(file, ai, github, vars):
         Log.print_yellow(f"File not found: {file}")
         return
 
-    file_diffs = Git.get_diff_in_file(head_ref=vars.head_ref, base_ref=vars.base_ref, file_path=file)
+    file_diffs = GitUtils.get_diff_in_file(head_ref=vars.head_ref, base_ref=vars.base_ref, file_path=file)
     if not file_diffs:
         Log.print_red(f"No diffs found for: {file}")
         return
 
-    # Split diffs into individual chunks/changes
-    individual_diffs = Git.split_diff_into_chunks(file_diffs)
+    individual_diffs = GitUtils.split_diff_into_chunks(file_diffs)
 
     for diff_chunk in individual_diffs:
         Log.print_green(f"AI analyzing changes in {file}...")
-        response = ai.ai_request_diffs(code=file_content, diffs=diff_chunk)  # review each change.
 
-        # Process AI response and post comment immediately
+        try:
+            repo = git.Repo(vars.repo_path) 
+            diff = repo.git.diff(vars.base_ref, vars.head_ref, file)
+            line_numbers = "..."
+            changed_lines = diff 
+        except Exception as e:
+            Log.print_red(f"Error while parsing diff chunk: {e}")
+            line_numbers = "N/A"
+            changed_lines = "N/A"
+
+        diff_data = {
+            "code": diff_chunk, 
+            "severity": "Warning", 
+            "type": "General",   
+            "issue_description": "Potential issue", 
+            "line_numbers": line_numbers,
+            "changed_lines": changed_lines,
+            "explanation": "",    
+        }
+        Log.print_yellow(f"Diff data being sent to AI: {diff_data}") 
+
+        try:
+            response = ai.ai_request_diffs(code=file_content, diffs=diff_data)
+        except Exception as e:
+            Log.print_red(f"Error during AI request: {e}")
+            continue
+
         if response and not AiBot.is_no_issues_text(response):
-            comments = AiBot.split_ai_response(response, diff_chunk)
+            comments = AiBot.split_ai_response(response, diff_chunk, file_path=file)
             existing_comments = github.get_comments()
             existing_comment_bodies = {c['body'] for c in existing_comments}
-            for comment in comments:  # Process each comment separately
+            for comment in comments:  
                 if comment.text:
 
                     comment_text = comment.text.strip()
@@ -119,16 +147,17 @@ def process_file(file, ai, github, vars):
                         Log.print_yellow(f"Posting general comment:\n{comment_text}")
                         try:
                             github.post_comment_general(
-                                text=comment_text  # Full comment content
+                                text=comment_text  
                             )
                         except RepositoryError as e:
                             Log.print_red(f"Failed to post review comment: {e}")
                         except Exception as e:
                             Log.print_red(f"Unexpected error: {e}")
-                    else:
-                        Log.print_yellow(f"Skipping comment: Comment already exists")
+                        else:
+                            Log.print_yellow(f"Skipping comment: Comment already exists")
                 else:
                     Log.print_yellow(f"Skipping comment because no content.")
+
 
 def parse_ai_suggestions(response):
     if not response:
@@ -140,6 +169,7 @@ def parse_ai_suggestions(response):
         if suggestion_text:
             suggestions.append({"text": suggestion_text})
     return suggestions
+
 
 if __name__ == "__main__":
     main()

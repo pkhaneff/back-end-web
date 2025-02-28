@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import re
-from ai.line_comment import LineComment  # Đảm bảo import class LineComment
+from log import Log
+from ai.line_comment import LineComment
 
 
 class AiBot(ABC):
@@ -15,7 +16,7 @@ class AiBot(ABC):
         - **Strictly limited to the changes highlighted in the provided diffs.**  Do not analyze the surrounding code.
         - Focus on meaningful structural changes within the diff, ignoring formatting or comments that are outside the diff.
         - Provide clear explanations and actionable suggestions.
-        - Categorize issues by severity: **Warning, Error, Critical**.
+        - Categorize issues by severity: **:warning: Warning, :x: Error, :bangbang: Critical**.
 
         **Review Guidelines:**
         - **Syntax Errors**: Compilation/runtime failures introduced by the change.
@@ -28,12 +29,15 @@ class AiBot(ABC):
 
         **[ERROR] - [{severity}] - [{type}] - {issue_description}**
 
-        **Code:**
-        ```diff
-        {code}
+        **Lines:**
+        ```
+        {line_numbers}: {changed_lines}
         ```
 
-        **Suggested Fix (if applicable):**
+        **:interrobang: Explanation:**
+        {explanation}
+
+        ** :white_check_mark: Suggested Fix (if applicable):**
         ```diff
         {suggested_fix}
         ```
@@ -58,12 +62,18 @@ class AiBot(ABC):
             severity = "Warning"
             issue_type = "General Issue"
             issue_description = "Potential issue in the changed code."
+            line_numbers = "N/A"
+            changed_lines = "N/A"
+            explanation = ""
             suggested_fix = ""
         else:
             code_to_review = diffs[0].get("code", "") if isinstance(diffs, list) else diffs.get("code", "")
             severity = diffs[0].get("severity", "Warning") if isinstance(diffs, list) else diffs.get("severity", "Warning")
             issue_type = diffs[0].get("type", "General Issue") if isinstance(diffs, list) else diffs.get("type", "General Issue")
             issue_description = diffs[0].get("issue_description", "No description") if isinstance(diffs, list) else diffs.get("issue_description", "No description")
+            line_numbers = diffs[0].get("line_numbers", "N/A") if isinstance(diffs, list) else diffs.get("line_numbers", "N/A")
+            changed_lines = diffs[0].get("changed_lines", "N/A") if isinstance(diffs, list) else diffs.get("changed_lines", "N/A")
+            explanation = diffs[0].get("explanation", "") if isinstance(diffs, list) else diffs.get("explanation", "")
             suggested_fix = diffs[0].get("suggested_fix", "") if isinstance(diffs, list) else diffs.get("suggested_fix", "")
 
         return AiBot.__chat_gpt_ask_long.format(
@@ -72,8 +82,11 @@ class AiBot(ABC):
             diffs=code_to_review,
             code=code,
             severity=severity,
-            type=issue_type,
+            type=issue_type,  
             issue_description=issue_description,
+            line_numbers=line_numbers,
+            changed_lines=changed_lines,
+            explanation=explanation,
             suggested_fix=suggested_fix
         )
 
@@ -85,50 +98,43 @@ class AiBot(ABC):
 
     @staticmethod
     def split_ai_response(input, diffs, file_path="") -> list[LineComment]:
-        """
-        Chia AI response thành danh sách comment, mỗi comment chứa diff (code thay đổi)
-        gây ra lỗi và thông tin về lỗi đó. Thêm file_path vào đầu mỗi comment và gạch ngang phân tách.
-        """
         if not input:
             return []
 
         comments = []
         entries = re.split(r"###", input.strip())
-        separator = "---\n"  # Gạch ngang phân tách bằng Markdown
+        separator = "---\n"
 
         for i, entry in enumerate(entries):
             entry = entry.strip()
             if not entry:
                 continue
 
+            comment_text = f"**File:** {file_path}\n\n"
+
             match = re.match(r"\s*\[ERROR\]\s*-\s*\[(Warning|Error|Critical)\]\s*-\s*\[(.*?)\]\s*-\s*(.*)", entry)
             if match:
                 severity, issue_type, description = match.groups()
 
-                code_match = re.search(r"Code:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
-                code = code_match.group(1).strip() if code_match else ""
+                lines_match = re.search(r"Lines:\s*```\s*([\s\S]*?)\s*```", entry)
+                lines_info = lines_match.group(1).strip() if lines_match else ""
 
-                fix_match = re.search(r"Suggested Fix:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
+                fix_match = re.search(r":white_check_mark: Suggested Fix \(if applicable\):\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
                 suggested_fix = fix_match.group(1).strip() if fix_match else ""
 
-                comment_text = f"**File:** {file_path}\n\n" if file_path else "" # Thêm file path vào comment text
                 comment_text += f"**[ERROR] - [{severity}] - [{issue_type}] - {description.strip()}**\n\n"
-                comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
+                if lines_info:
+                    comment_text += f"**Lines:**\n```\n{lines_info}\n```\n\n"
+
                 if suggested_fix:
                     comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
 
-                # Thêm gạch ngang phân tách (trừ comment đầu tiên)
-                if i > 0:
-                    comment_text = separator + comment_text
-
-                comments.append(LineComment(line="", text=comment_text))
             else:
-                comment_text = f"**File:** {file_path}\n\n" if file_path else "" # Thêm file path vào comment text
-                # Thêm gạch ngang phân tách (trừ comment đầu tiên)
-                if i > 0:
-                    comment_text = separator + comment_text
-
                 comment_text += entry
-                comments.append(LineComment(line="", text=comment_text))
+
+            if i > 0:
+                comment_text = separator + comment_text
+
+            comments.append(LineComment(line="", text=comment_text))
 
         return comments

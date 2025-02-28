@@ -13,6 +13,7 @@ class EnvVars:
         self.event_path = os.getenv('GITHUB_EVENT_PATH')
         self.chat_gpt_token = os.getenv('CHATGPT_KEY')
         self.chat_gpt_model = os.getenv('CHATGPT_MODEL')
+        self.repo_path = os.getenv('GITHUB_WORKSPACE')
 
         if not self.event_path:
             raise ValueError("GITHUB_EVENT_PATH is not set. Make sure this variable is defined.")
