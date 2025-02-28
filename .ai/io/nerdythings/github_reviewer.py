@@ -75,12 +75,12 @@ def update_pr_summary(changed_files, ai, github):
     if PR_SUMMARY_COMMENT_IDENTIFIER in current_body:
         updated_body = re.sub(
             f"{PR_SUMMARY_COMMENT_IDENTIFIER}.*",
-            f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## PR Summary\n\n{new_summary}",
+            f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{new_summary}",
             current_body,
             flags=re.DOTALL
         )
     else:
-        updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## PR Summary\n\n{new_summary}\n\n{current_body}"
+        updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{new_summary}\n\n{current_body}"
 
     try:
         github.update_pull_request(updated_body)
@@ -109,7 +109,16 @@ def process_file(file, ai, github, vars):
         Log.print_yellow(f"base_ref: {vars.base_ref}, head_ref: {vars.head_ref}, file: {file}")
         try:
             repo = git.Repo(vars.repo_path)
-            diff = repo.git.diff(vars.base_ref, vars.head_ref, '--', file)
+            try:
+                repo.git.rev_parse('--verify', 'main')
+                base_branch = 'main'
+            except git.exc.GitCommandError:
+                base_branch = vars.base_ref
+
+            Log.print_yellow(f"DEBUG: base_ref = {vars.base_ref}, base_branch = {base_branch}")
+            diff = repo.git.diff(base_branch, vars.head_ref, '--', file)
+
+
             line_numbers = "..."
             changed_lines = diff
         except Exception as e:
@@ -119,15 +128,15 @@ def process_file(file, ai, github, vars):
             changed_lines = "N/A"
 
         diff_data = {
-            "code": diff_chunk, 
-            "severity": "Warning", 
-            "type": "General",   
-            "issue_description": "Potential issue", 
+            "code": diff_chunk,
+            "severity": "Warning",
+            "type": "General",
+            "issue_description": "Potential issue",
             "line_numbers": line_numbers,
             "changed_lines": changed_lines,
-            "explanation": "",    
+            "explanation": "",
         }
-        Log.print_yellow(f"Diff data being sent to AI: {diff_data}") 
+        Log.print_yellow(f"Diff data being sent to AI: {diff_data}")
 
         try:
             response = ai.ai_request_diffs(code=file_content, diffs=diff_data)
@@ -139,7 +148,7 @@ def process_file(file, ai, github, vars):
             comments = AiBot.split_ai_response(response, diff_chunk, file_path=file)
             existing_comments = github.get_comments()
             existing_comment_bodies = {c['body'] for c in existing_comments}
-            for comment in comments:  
+            for comment in comments:
                 if comment.text:
 
                     comment_text = comment.text.strip()
@@ -147,7 +156,7 @@ def process_file(file, ai, github, vars):
                         Log.print_yellow(f"Posting general comment:\n{comment_text}")
                         try:
                             github.post_comment_general(
-                                text=comment_text  
+                                text=comment_text
                             )
                         except RepositoryError as e:
                             Log.print_red(f"Failed to post review comment: {e}")
@@ -158,8 +167,8 @@ def process_file(file, ai, github, vars):
                 else:
                     Log.print_yellow(f"Skipping comment because no content.")
         else:
-             Log.print_green(f"No critical issues found in diff chunk, skipping comments.")
-             continue 
+            Log.print_green(f"No critical issues found in diff chunk, skipping comments.")
+            continue 
 
 
 def parse_ai_suggestions(response):

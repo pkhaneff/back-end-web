@@ -23,6 +23,7 @@ class AiBot(ABC):
         - **Logical Errors**: Incorrect conditions, infinite loops, unexpected behavior caused by the change.
         - **Security Vulnerabilities**: Security problems directly caused by the change.
         - **Performance Bottlenecks**: Performance degradation as a result of the change.
+        - **IMPORTANT: If the diff solely corrects an obvious error (e.g., typo, incorrect variable name) and does not introduce any new potential issues, respond with "{no_response}".**
 
         **Output Format:**
         Each issue should follow the following Markdown format, resembling a commit log:
@@ -42,7 +43,7 @@ class AiBot(ABC):
         {suggested_fix}
         ```
 
-        **Important Notes:**
+        **:pushpin:Important Notes:**
         *   The review **MUST** be based solely on the provided `diffs`. If there are no issues within the `diffs`, then respond with "{no_response}".
     """
 
@@ -112,7 +113,7 @@ class AiBot(ABC):
 
             comment_text = f"**File:** {file_path}\n\n"
 
-            match = re.match(r"\s*\[ERROR\]\s*-\s*\[(Warning|Error|Critical)\]\s*-\s*\[(.*?)\]\s*-\s*(.*)", entry)
+            match = re.match(r"\s*\[:x:ERROR\]\s*-\s*\[(:warning:Warning|:x:Error|:bangbang:Critical)\]\s*-\s*\[(.*?)\]\s*-\s*(.*)", entry)
             if match:
                 severity, issue_type, description = match.groups()
 
@@ -124,7 +125,7 @@ class AiBot(ABC):
 
                 comment_text += f"**[ERROR] - [{severity}] - [{issue_type}] - {description.strip()}**\n\n"
                 if lines_info:
-                    comment_text += f"**Lines:**\n```\n{lines_info}\n```\n\n"
+                    comment_text += f"**:point_right:Lines:**\n```\n{lines_info}\n```\n\n"
 
                 if suggested_fix:
                     comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
