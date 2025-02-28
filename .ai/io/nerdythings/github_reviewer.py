@@ -1,20 +1,17 @@
 import os
 import re
 import git
-from git_utils import GitUtils
-from ai.chat_gpt import ChatGPT
 from log import Log
+from ai.chat_gpt import ChatGPT
 from ai.ai_bot import AiBot
+from ai.prompts import SUMMARY_PROMPT
+from git_utils import GitUtils
 from env_vars import EnvVars
 from repository.github import GitHub
 from repository.repository import RepositoryError
-import sys
-print(sys.executable)
-print(sys.path)
 
 PR_SUMMARY_COMMENT_IDENTIFIER = "<!-- PR SUMMARY COMMENT -->"
 EXCLUDED_FOLDERS = {".ai/io/nerdythings", ".github/workflows"}
-
 
 def main():
     vars = EnvVars()
@@ -48,26 +45,27 @@ def main():
     for file in changed_files:
         process_file(file, ai, github, vars)
 
+def generate_summary_table(changed_files, file_summaries):
+    """Tạo bảng PR Summary dưới dạng chuỗi Markdown."""
+    table_header = "| Files | Change Summary |\n|---|---|"
+    table_rows = [f"| {file} | {summary} |" for file, summary in zip(changed_files, file_summaries)]
+    return "\n".join([table_header] + table_rows)
 
 def update_pr_summary(changed_files, ai, github):
     Log.print_green("Updating PR description...")
 
-    file_contents = []
+    file_summaries = []
     for file in changed_files:
         try:
             with open(file, 'r', encoding="utf-8", errors="replace") as f:
                 content = f.read()
-                file_contents.append(f"### {file}\n{content[:1000]}...\n")
+                new_summary = ai.ai_request_summary(file_changes={file:content[:1000]}, prompt=SUMMARY_PROMPT)
+                file_summaries.append(new_summary)
         except FileNotFoundError:
             Log.print_yellow(f"File not found: {file}")
-            continue
+            file_summaries.append(f"File not found: {file}") 
 
-    if not file_contents:
-        return
-
-    Log.print_yellow(f"File contents before processing: {file_contents}")
-    full_context = {file: (content[:1000] if isinstance(content, str) else "") for file, content in zip(changed_files, file_contents)}
-    new_summary = ai.ai_request_summary(file_changes=full_context)
+    summary_table = generate_summary_table(changed_files, file_summaries)
 
     pr_data = github.get_pull_request()
     current_body = pr_data.get("body") or ""
@@ -75,12 +73,12 @@ def update_pr_summary(changed_files, ai, github):
     if PR_SUMMARY_COMMENT_IDENTIFIER in current_body:
         updated_body = re.sub(
             f"{PR_SUMMARY_COMMENT_IDENTIFIER}.*",
-            f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{new_summary}",
+            f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}",
             current_body,
             flags=re.DOTALL
         )
     else:
-        updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{new_summary}\n\n{current_body}"
+        updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}\n\n{current_body}"
 
     try:
         github.update_pull_request(updated_body)
@@ -181,7 +179,5 @@ def parse_ai_suggestions(response):
         if suggestion_text:
             suggestions.append({"text": suggestion_text})
     return suggestions
-
-
 if __name__ == "__main__":
     main()
