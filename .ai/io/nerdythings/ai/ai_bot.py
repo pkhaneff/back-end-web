@@ -15,7 +15,7 @@ class AiBot(ABC):
         - **Strictly limited to the changes highlighted in the provided diffs.**  Do not analyze the surrounding code.
         - Focus on meaningful structural changes within the diff, ignoring formatting or comments that are outside the diff.
         - Provide clear explanations and actionable suggestions.
-        - Categorize issues by severity: **Warning, Error, Critical**.
+        - Categorize issues by severity: **:warning: Warning, :x: Error, :bangbang: Critical**.
 
         **Review Guidelines:**
         - **Syntax Errors**: Compilation/runtime failures introduced by the change.
@@ -94,14 +94,14 @@ class AiBot(ABC):
 
         comments = []
         entries = re.split(r"###", input.strip())
-        separator = "---\n"  # Gạch ngang phân tách bằng Markdown
+        separator = "---\n" 
 
         for i, entry in enumerate(entries):
             entry = entry.strip()
             if not entry:
                 continue
 
-            comment_text = f"**File:** {file_path}\n\n"  # Thêm file path vào comment text
+            comment_text = f"**File:** {file_path}\n\n"
 
             match = re.match(r"\s*\[ERROR\]\s*-\s*\[(Warning|Error|Critical)\]\s*-\s*\[(.*?)\]\s*-\s*(.*)", entry)
             if match:
@@ -121,7 +121,6 @@ class AiBot(ABC):
             else:
                 comment_text += entry
 
-            # Thêm gạch ngang phân tách (trừ comment đầu tiên)
             if i > 0:
                 comment_text = separator + comment_text
 

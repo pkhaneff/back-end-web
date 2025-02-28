@@ -3,10 +3,10 @@ import bcryptjs from 'bcryptjs'
 import { errorHandler } from "../utils/error.js"
 import jwt from 'jsonwebtoken'
 
-export const = async (req, res, next) => {
+export const signup = async (req, res, next) => {
     const { username, email, password} = req.body
 
-    if(!username || ! email !password || username === '' || password ==='' || email === ''){
+    if(!username || ! email || !password || username === '' || password ==='' || email === ''){
         next(errorHandler(400, 'All fields are required'))
     }
 

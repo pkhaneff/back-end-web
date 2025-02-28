@@ -108,7 +108,7 @@ def process_file(file, ai, github, vars):
 
         # Process AI response and post comment immediately
         if response and not AiBot.is_no_issues_text(response):
-            comments = AiBot.split_ai_response(response, diff_chunk)
+            comments = AiBot.split_ai_response(response, diff_chunk, file_path=file)
             existing_comments = github.get_comments()
             existing_comment_bodies = {c['body'] for c in existing_comments}
             for comment in comments:  # Process each comment separately
