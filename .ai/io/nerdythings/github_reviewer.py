@@ -1,5 +1,6 @@
 import os
 import re
+import git
 from git import Git
 from ai.chat_gpt import ChatGPT
 from log import Log
