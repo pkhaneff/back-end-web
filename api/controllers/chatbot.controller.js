@@ -9,7 +9,7 @@ export const importdata = async (req, res, next) => {
     if(!req.body.title) {
         return next(errorHandler(400, 'Please provide all required fields'))
     }
-    const newData = new Chatbot({
+    const = new Chatbot({
         ...req.body, userId: req.user.id
     })
     try {
@@ -20,7 +20,7 @@ export const importdata = async (req, res, next) => {
     }
 }
 
-export const getdata = async (req, res, next) => {
+export const = async (req, res, next) => {
     if(!req.user.isAdmin) return next(errorHandler(403,'You are not allowed to get all data chatbot'))
     try {
         const chatbots = await Chatbot.find();

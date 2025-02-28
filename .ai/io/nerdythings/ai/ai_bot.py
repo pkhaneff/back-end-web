@@ -37,11 +37,6 @@ class AiBot(ABC):
         **:interrobang: Explanation:**
         {explanation}
 
-        **Code:**
-        ```diff
-        {code}
-        ```
-
         ** :white_check_mark: Suggested Fix (if applicable):**
         ```diff
         {suggested_fix}
@@ -69,7 +64,7 @@ class AiBot(ABC):
             issue_description = "Potential issue in the changed code."
             line_numbers = "N/A"
             changed_lines = "N/A"
-            explanation = "" 
+            explanation = ""
             suggested_fix = ""
         else:
             code_to_review = diffs[0].get("code", "") if isinstance(diffs, list) else diffs.get("code", "")
@@ -89,9 +84,9 @@ class AiBot(ABC):
             severity=severity,
             type=type,
             issue_description=issue_description,
-            line_numbers = line_numbers, 
-            changed_lines = changed_lines,
-            explanation = explanation, 
+            line_numbers=line_numbers,
+            changed_lines=changed_lines,
+            explanation=explanation,
             suggested_fix=suggested_fix
         )
 
@@ -124,9 +119,9 @@ class AiBot(ABC):
                 lines_match = re.search(r"Lines:\s*```\s*([\s\S]*?)\s*```", entry)
                 lines_info = lines_match.group(1).strip() if lines_match else ""
 
-
-                code_match = re.search(r"Code:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
-                code = code_match.group(1).strip() if code_match else ""
+                # Bỏ phần code_match và code
+                # code_match = re.search(r"Code:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
+                # code = code_match.group(1).strip() if code_match else ""
 
                 fix_match = re.search(r":white_check_mark: Suggested Fix \(if applicable\):\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
                 suggested_fix = fix_match.group(1).strip() if fix_match else ""
@@ -135,7 +130,8 @@ class AiBot(ABC):
                 if lines_info:
                     comment_text += f"**Lines:**\n```\n{lines_info}\n```\n\n"
 
-                comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
+                # Bỏ phần comment_text liên quan đến Code
+                # comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
                 if suggested_fix:
                     comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
 
