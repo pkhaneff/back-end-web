@@ -38,20 +38,20 @@ CHAT_GPT_ASK_LONG = """
         **:pushpin:Important Notes:**
         *   The review **MUST** be based solely on the provided `diffs`. If there are no issues within the `diffs`, then respond with "{no_response}".
     """
+
 SUMMARY_PROMPT = """
     Bạn là một chuyên gia tạo mô tả ngắn gọn cho bảng tóm tắt thay đổi code. 
-    Hãy mô tả các thay đổi trong file sau đây theo phong cách ngắn gọn, 
-    tập trung vào các hành động chính và đối tượng bị ảnh hưởng. 
-    Sử dụng các động từ mạnh và cụm từ ngắn gọn.
+    Hãy tóm tắt mục đích kinh doanh hoặc tác động của các thay đổi trong file sau đây. 
+    Tập trung vào lý do thay đổi được thực hiện và giá trị mà nó mang lại cho người dùng hoặc hệ thống. 
+    Sử dụng giọng văn rõ ràng, không kỹ thuật và dễ hiểu cho người không phải là lập trình viên.
 
     Ví dụ:
-    - Thêm chức năng X vào class Y.
-    - Sửa lỗi Z trong hàm A.
-    - Cải thiện hiệu suất của thuật toán B.
+    - Thêm chức năng tìm kiếm mới để người dùng dễ dàng tìm thấy thông tin họ cần.
+    - Cập nhật giao diện người dùng để cải thiện trải nghiệm người dùng trên thiết bị di động.
+    - Sửa lỗi thanh toán để đảm bảo giao dịch được xử lý chính xác.
 
     File: {file_name}
     Nội dung thay đổi:
     {file_content}
     """
-
     
