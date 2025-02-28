@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import re
+from log import Log
 from ai.line_comment import LineComment  # Đảm bảo import class LineComment
 
 

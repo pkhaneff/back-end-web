@@ -77,15 +77,7 @@ def update_pr_summary(changed_files, ai, github):
         )
     else:
         updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## PR Summary\n\n{new_summary}\n\n{current_body}"
-
-    try:
-        github.update_pull_request(updated_body)
-        Log.print_yellow("PR description updated successfully!")
-    except RepositoryError as e:
-        Log.print_red(f"Failed to update PR description: {e}")
-
-
-def process_file(file, ai, github, vars):
+saveData
     Log.print_green(f"Reviewing file: {file}")
     try:
         with open(file, 'r', encoding="utf-8", errors="replace") as f:
