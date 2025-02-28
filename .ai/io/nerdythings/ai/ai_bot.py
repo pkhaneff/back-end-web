@@ -121,8 +121,8 @@ class AiBot(ABC):
 
                 comment_text += f"**[ERROR] - [{severity}] - [{issue_type}] - {description.strip()}**\n\n"
                 if explanation:
-                comment_text += f"**Explanation:**\n{explanation}\n\n"
-                comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
+                    comment_text += f"**Explanation:**\n{explanation}\n\n"
+                    comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
                 if suggested_fix:
                     comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
 
