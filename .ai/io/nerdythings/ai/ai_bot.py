@@ -23,6 +23,7 @@ class AiBot(ABC):
         - **Logical Errors**: Incorrect conditions, infinite loops, unexpected behavior caused by the change.
         - **Security Vulnerabilities**: Security problems directly caused by the change.
         - **Performance Bottlenecks**: Performance degradation as a result of the change.
+        - **IMPORTANT: If the diff solely corrects an obvious error (e.g., typo, incorrect variable name) and does not introduce any new potential issues, respond with "{no_response}".**
 
         **Output Format:**
         Each issue should follow the following Markdown format, resembling a commit log:
