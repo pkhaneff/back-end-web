@@ -3,7 +3,7 @@ import subprocess
 from typing import List
 from log import Log
 
-class Git:
+class GitUtils:
 
     @staticmethod
     def split_diff_into_chunks(diff_text):

@@ -1,7 +1,7 @@
 import os
 import re
 import git
-from git import Git
+from git_utils import GitUtils
 from ai.chat_gpt import ChatGPT
 from log import Log
 from ai.ai_bot import AiBot
@@ -24,7 +24,7 @@ def main():
     github = GitHub(vars.token, vars.owner, vars.repo, vars.pull_number)
     ai = ChatGPT(vars.chat_gpt_token, vars.chat_gpt_model)
 
-    changed_files = Git.get_diff_files(head_ref=vars.head_ref, base_ref=vars.base_ref)
+    changed_files = GitUtils.get_diff_files(head_ref=vars.head_ref, base_ref=vars.base_ref)
     if not changed_files:
         Log.print_red("No changes detected.")
         return
@@ -95,12 +95,12 @@ def process_file(file, ai, github, vars):
         Log.print_yellow(f"File not found: {file}")
         return
 
-    file_diffs = Git.get_diff_in_file(head_ref=vars.head_ref, base_ref=vars.base_ref, file_path=file)
+    file_diffs = GitUtils.get_diff_in_file(head_ref=vars.head_ref, base_ref=vars.base_ref, file_path=file)
     if not file_diffs:
         Log.print_red(f"No diffs found for: {file}")
         return
 
-    individual_diffs = Git.split_diff_into_chunks(file_diffs)
+    individual_diffs = GitUtils.split_diff_into_chunks(file_diffs)
 
     for diff_chunk in individual_diffs:
         Log.print_green(f"AI analyzing changes in {file}...")
