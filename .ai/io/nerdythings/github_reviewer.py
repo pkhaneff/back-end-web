@@ -75,12 +75,12 @@ def update_pr_summary(changed_files, ai, github):
     if PR_SUMMARY_COMMENT_IDENTIFIER in current_body:
         updated_body = re.sub(
             f"{PR_SUMMARY_COMMENT_IDENTIFIER}.*",
-            f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## PR Summary\n\n{new_summary}",
+            f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{new_summary}",
             current_body,
             flags=re.DOTALL
         )
     else:
-        updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## PR Summary\n\n{new_summary}\n\n{current_body}"
+        updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{new_summary}\n\n{current_body}"
 
     try:
         github.update_pull_request(updated_body)
