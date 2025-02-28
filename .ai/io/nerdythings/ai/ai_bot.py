@@ -117,7 +117,7 @@ class AiBot(ABC):
             if match:
                 severity, issue_type, description = match.groups()
 
-                lines_match = re.search(r":point_right:Lines:\s*```\s*([\s\S]*?)\s*```", entry)
+                lines_match = re.search(r"Lines:\s*```\s*([\s\S]*?)\s*```", entry)
                 lines_info = lines_match.group(1).strip() if lines_match else ""
 
                 fix_match = re.search(r":white_check_mark: Suggested Fix \(if applicable\):\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
@@ -125,7 +125,7 @@ class AiBot(ABC):
 
                 comment_text += f"**[ERROR] - [{severity}] - [{issue_type}] - {description.strip()}**\n\n"
                 if lines_info:
-                    comment_text += f"**Lines:**\n```\n{lines_info}\n```\n\n"
+                    comment_text += f"**:point_right:Lines:**\n```\n{lines_info}\n```\n\n"
 
                 if suggested_fix:
                     comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
