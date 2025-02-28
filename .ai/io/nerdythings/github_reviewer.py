@@ -114,7 +114,7 @@ def process_file(file, ai, github, vars):
             changed_lines = diff
         except Exception as e:
             Log.print_red(f"Error while parsing diff chunk: {e}")
-            Log.print_red(f"Exception details: {type(e).__name__}, {e}") # In thêm thông tin về exception
+            Log.print_red(f"Exception details: {type(e).__name__}, {e}")
             line_numbers = "N/A"
             changed_lines = "N/A"
 
@@ -135,7 +135,7 @@ def process_file(file, ai, github, vars):
             Log.print_red(f"Error during AI request: {e}")
             continue
 
-        if response and not AiBot.is_no_issues_text(response):
+        if response and not AiBot.is_no_issues_text(response): # This line has been updated
             comments = AiBot.split_ai_response(response, diff_chunk, file_path=file)
             existing_comments = github.get_comments()
             existing_comment_bodies = {c['body'] for c in existing_comments}
@@ -157,6 +157,8 @@ def process_file(file, ai, github, vars):
                             Log.print_yellow(f"Skipping comment: Comment already exists")
                 else:
                     Log.print_yellow(f"Skipping comment because no content.")
+        else:
+             Log.print_green(f"No critical issues found in diff chunk, skipping comments.")
 
 
 def parse_ai_suggestions(response):

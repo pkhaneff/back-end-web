@@ -33,7 +33,7 @@ export const updateUser = async ( req, res, next ) => {
     try {
         const updatedUser = await User.findByIdAndUpdate(req.params.userId, {
             $set:{
-                username: req.body.username,
+                usernameacd: req.body.username,
                 email: req.body.email,
                 profilePicture: req.body.profilePicture,
                 password: req.body.password
