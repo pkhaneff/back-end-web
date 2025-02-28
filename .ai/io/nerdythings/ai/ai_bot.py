@@ -101,6 +101,8 @@ class AiBot(ABC):
             if not entry:
                 continue
 
+            comment_text = f"**File:** {file_path}\n\n"  # Thêm file path vào comment text
+
             match = re.match(r"\s*\[ERROR\]\s*-\s*\[(Warning|Error|Critical)\]\s*-\s*\[(.*?)\]\s*-\s*(.*)", entry)
             if match:
                 severity, issue_type, description = match.groups()
@@ -111,24 +113,18 @@ class AiBot(ABC):
                 fix_match = re.search(r"Suggested Fix:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
                 suggested_fix = fix_match.group(1).strip() if fix_match else ""
 
-                comment_text = f"**File:** {file_path}\n\n" if file_path else "" # Thêm file path vào comment text
                 comment_text += f"**[ERROR] - [{severity}] - [{issue_type}] - {description.strip()}**\n\n"
                 comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
                 if suggested_fix:
                     comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
 
-                # Thêm gạch ngang phân tách (trừ comment đầu tiên)
-                if i > 0:
-                    comment_text = separator + comment_text
-
-                comments.append(LineComment(line="", text=comment_text))
             else:
-                comment_text = f"**File:** {file_path}\n\n" if file_path else "" # Thêm file path vào comment text
-                # Thêm gạch ngang phân tách (trừ comment đầu tiên)
-                if i > 0:
-                    comment_text = separator + comment_text
-
                 comment_text += entry
-                comments.append(LineComment(line="", text=comment_text))
+
+            # Thêm gạch ngang phân tách (trừ comment đầu tiên)
+            if i > 0:
+                comment_text = separator + comment_text
+
+            comments.append(LineComment(line="", text=comment_text))
 
         return comments
