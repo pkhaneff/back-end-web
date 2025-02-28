@@ -30,7 +30,7 @@ export const getpostcomment = async (req, res, next) => {
     }
 }
 
-export const = async (req, res, next) => {
+export const likeComment = async (req, res, next) => {
     try {
       const comment = await Comment.findById(req.params.commentId);
       if (!comment) {
@@ -61,7 +61,7 @@ export const editComment = async (req, res, next) => {
       return next(errorHandler(403, 'You are not allowed to edit this comment'))
     }
 
-    const editedComment = await Comment.findByIdAndUpdate(req.params.commentId, {
+    const editedComment = await Commentkad.findByIdAndUpdate(req.params.commentId, {
       content: req.body.content
     },{
       new: true
