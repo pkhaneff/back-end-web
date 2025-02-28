@@ -62,13 +62,32 @@ def generate_summary_table(all_files, file_summaries):
 
     for file, summary in zip(all_files, file_summaries):
         # Escape Markdown special characters
-        file_escaped = file.replace("|", "\\|").replace("*", "\\*").replace("_", "\\_")
-        summary_escaped = summary.replace("|", "\\|").replace("*", "\\*").replace("_", "\\_")
+        file_escaped = escape_markdown(file)
+        # Replace newlines with <br> and escape Markdown special characters
+        summary_escaped = escape_markdown(summary.replace("\n", "<br>"))
+        # Limit summary length
+        summary_escaped = summary_escaped[:500] + "..." if len(summary_escaped) > 500 else summary_escaped
 
         row = f"| {file_escaped} | {summary_escaped} |"
         table_rows.append(row)
         print(f"Debug: Row = {row}") # In ra từng hàng để kiểm tra
+
+    if not table_rows:
+        return "No changes to summarize."
+
     return "\n".join([table_header] + table_rows)
+
+def escape_markdown(text):
+    """Escape Markdown special characters."""
+    text = text.replace("\\", "\\\\")  # Escape backslashes first
+    text = text.replace("|", "|")
+    text = text.replace("*", "\\*")
+    text = text.replace("_", "\\_")
+    text = text.replace("`", "\\`")
+    text = text.replace("#", "\\#")
+    text = text.replace("<", "<")
+    text = text.replace(">", ">")
+    return text
 
 def update_pr_summary(changed_files, ai, github):
     Log.print_green("Updating PR description...")
@@ -92,7 +111,7 @@ def update_pr_summary(changed_files, ai, github):
         try:
             with open(file, 'r', encoding="utf-8", errors="replace") as f:
                 content = f.read()
-                new_summary = ai.ai_request_summary(file_changes={file:content[:1000]}, prompt=SUMMARY_PROMPT)
+                new_summary = ai.ai_request_summary(file_changes={file:content[:1000]}, prompt=SUMMARY_PROMPT.format(file_name=file, file_content=content[:1000]))
                 file_summaries.append(new_summary)
         except FileNotFoundError:
             Log.print_yellow(f"File not found: {file}")

@@ -14,7 +14,7 @@ export const create = async (req, res, next) => {
         ...req.body, slug, userId: req.user.id
     })
     try {
-        const = await newPost.save()
+        const savePost = await newPost.save()
         res.status(201).json(savePost)
     } catch (error) {
         next(error)
