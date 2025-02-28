@@ -82,7 +82,7 @@ class AiBot(ABC):
             diffs=code_to_review,
             code=code,
             severity=severity,
-            type=type,
+            type=issue_type,  
             issue_description=issue_description,
             line_numbers=line_numbers,
             changed_lines=changed_lines,
@@ -119,10 +119,6 @@ class AiBot(ABC):
                 lines_match = re.search(r"Lines:\s*```\s*([\s\S]*?)\s*```", entry)
                 lines_info = lines_match.group(1).strip() if lines_match else ""
 
-                # Bỏ phần code_match và code
-                # code_match = re.search(r"Code:\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
-                # code = code_match.group(1).strip() if code_match else ""
-
                 fix_match = re.search(r":white_check_mark: Suggested Fix \(if applicable\):\s*```diff\s*(.*?)\s*```", entry, re.DOTALL)
                 suggested_fix = fix_match.group(1).strip() if fix_match else ""
 
@@ -130,8 +126,6 @@ class AiBot(ABC):
                 if lines_info:
                     comment_text += f"**Lines:**\n```\n{lines_info}\n```\n\n"
 
-                # Bỏ phần comment_text liên quan đến Code
-                # comment_text += f"**Code:**\n```diff\n{code}\n```\n\n"
                 if suggested_fix:
                     comment_text += f"**Suggested Fix:**\n```diff\n{suggested_fix}\n```\n"
 
