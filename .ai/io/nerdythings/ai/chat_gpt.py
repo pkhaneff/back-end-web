@@ -41,7 +41,7 @@ class ChatGPT(AiBot):
         
     import json
 
-    def ai_request_summary(self, file_changes):
+    def ai_request_summary(self, file_changes, prompt):  # Thêm tham số prompt
         try:
             print(f"🔍 Debug: type(file_changes) = {type(file_changes)}")  
             print(f"🔍 Debug: file_changes keys = {list(file_changes.keys())}")
@@ -56,9 +56,10 @@ class ChatGPT(AiBot):
             if not isinstance(file_changes, dict):
                 raise ValueError(f"⚠️ file_changes phải là một dictionary! Nhận: {type(file_changes)}")
 
-            summary_request = "Tóm tắt nội dung PR...\n"
+            # Tạo request cho ChatGPT
+            summary_request = ""
             for file_name, file_content in file_changes.items():
-                summary_request += f"\nFile: {file_name}\nNội dung thay đổi:\n{file_content}\n"
+                summary_request = prompt.format(file_name=file_name, file_content=file_content)
 
             response = self.__client.chat.completions.create(
                 messages=[{"role": "user", "content": summary_request}],
