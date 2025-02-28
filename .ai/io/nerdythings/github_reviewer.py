@@ -106,15 +106,15 @@ def process_file(file, ai, github, vars):
     individual_diffs = GitUtils.split_diff_into_chunks(file_diffs)
 
     for diff_chunk in individual_diffs:
-        Log.print_green(f"AI analyzing changes in {file}...")
-
+        Log.print_yellow(f"base_ref: {vars.base_ref}, head_ref: {vars.head_ref}, file: {file}")
         try:
-            repo = git.Repo(vars.repo_path) 
-            diff = repo.git.diff(vars.base_ref, vars.head_ref, file)
+            repo = git.Repo(vars.repo_path)
+            diff = repo.git.diff(vars.base_ref, vars.head_ref, '--', file)
             line_numbers = "..."
-            changed_lines = diff 
+            changed_lines = diff
         except Exception as e:
             Log.print_red(f"Error while parsing diff chunk: {e}")
+            Log.print_red(f"Exception details: {type(e).__name__}, {e}")
             line_numbers = "N/A"
             changed_lines = "N/A"
 
@@ -153,10 +153,13 @@ def process_file(file, ai, github, vars):
                             Log.print_red(f"Failed to post review comment: {e}")
                         except Exception as e:
                             Log.print_red(f"Unexpected error: {e}")
-                        else:
-                            Log.print_yellow(f"Skipping comment: Comment already exists")
+                    else:
+                        Log.print_yellow(f"Skipping comment: Comment already exists")
                 else:
                     Log.print_yellow(f"Skipping comment because no content.")
+        else:
+             Log.print_green(f"No critical issues found in diff chunk, skipping comments.")
+             continue 
 
 
 def parse_ai_suggestions(response):
