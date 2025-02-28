@@ -109,18 +109,13 @@ def process_file(file, ai, github, vars):
         Log.print_yellow(f"base_ref: {vars.base_ref}, head_ref: {vars.head_ref}, file: {file}")
         try:
             repo = git.Repo(vars.repo_path)
-
-            # Option 1:  Use vars.base_ref directly (simplest)
-            # diff = repo.git.diff(vars.base_ref, vars.head_ref, '--', file)
-
-            # Option 2:  Use vars.base_ref but still check if main exists (more complex)
             try:
                 repo.git.rev_parse('--verify', 'main')
                 base_branch = 'main'
             except git.exc.GitCommandError:
-                base_branch = vars.base_ref  # Use vars.base_ref if main doesn't exist
+                base_branch = vars.base_ref
 
-            Log.print_yellow(f"DEBUG: base_ref = {vars.base_ref}, base_branch = {base_branch}") # Print for debugging
+            Log.print_yellow(f"DEBUG: base_ref = {vars.base_ref}, base_branch = {base_branch}")
             diff = repo.git.diff(base_branch, vars.head_ref, '--', file)
 
 
@@ -172,8 +167,8 @@ def process_file(file, ai, github, vars):
                 else:
                     Log.print_yellow(f"Skipping comment because no content.")
         else:
-             Log.print_green(f"No critical issues found in diff chunk, skipping comments.")
-             continue 
+            Log.print_green(f"No critical issues found in diff chunk, skipping comments.")
+            continue 
 
 
 def parse_ai_suggestions(response):
