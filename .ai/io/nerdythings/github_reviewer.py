@@ -94,10 +94,10 @@ def update_pr_summary(changed_files, ai, github):
                 content = f.read()
                 # Modify prompt to focus on business impact/purpose
                 business_prompt = SUMMARY_PROMPT.replace(
-                    "Hãy mô tả các thay đổi trong file sau đây theo phong cách ngắn gọn",
-                    "Hãy tóm tắt mục đích kinh doanh hoặc tác động của các thay đổi trong file sau đây."
+                    "Hãy tóm tắt mục đích kinh doanh hoặc tác động của các thay đổi trong file sau đây.",
+                    "Hãy tóm tắt chi tiết (từ 3-5 dòng) mục đích kinh doanh hoặc tác động của các thay đổi trong file sau đây. Mô tả rõ ràng vấn đề nào được giải quyết, giá trị nào được mang lại cho người dùng hoặc hệ thống, và cách thay đổi này ảnh hưởng đến trải nghiệm người dùng hoặc hiệu suất hệ thống."
                 )
-                new_summary = ai.ai_request_summary(file_changes={file:content[:1000]}, prompt=business_prompt)
+                new_summary = ai.ai_request_summary(file_changes={file:content[:1500]}, prompt=business_prompt)
                 file_summaries.append(new_summary)
         except FileNotFoundError:
             Log.print_yellow(f"File not found: {file}")
