@@ -5,6 +5,7 @@ from git_utils import GitUtils
 from ai.chat_gpt import ChatGPT
 from log import Log
 from ai.ai_bot import AiBot
+from ai.prompts import SUMMARY_PROMPT
 from env_vars import EnvVars
 from repository.github import GitHub
 from repository.repository import RepositoryError
@@ -16,24 +17,6 @@ print(sys.path)
 PR_SUMMARY_COMMENT_IDENTIFIER = "<!-- PR SUMMARY COMMENT -->"
 PR_SUMMARY_FILES_IDENTIFIER = "<!-- PR SUMMARY FILES -->"  # Identifier cho comment chứa danh sách file
 EXCLUDED_FOLDERS = {".ai/io/nerdythings", ".github/workflows"}
-from ai.prompts import SUMMARY_PROMPT
-
-# Prompt cho ChatGPT (theo phong cách bảng)
-#SUMMARY_PROMPT = """
-#Bạn là một chuyên gia tạo mô tả ngắn gọn cho bảng tóm tắt thay đổi code. 
-#Hãy mô tả các thay đổi trong file sau đây theo phong cách ngắn gọn, 
-#tập trung vào các hành động chính và đối tượng bị ảnh hưởng. 
-#Sử dụng các động từ mạnh và cụm từ ngắn gọn.
-
-#Ví dụ:
-#- Thêm chức năng X vào class Y.
-#- Sửa lỗi Z trong hàm A.
-#- Cải thiện hiệu suất của thuật toán B.
-
-#File: {file_name}
-#Nội dung thay đổi:
-#{file_content}
-#"""
 
 def main():
     vars = EnvVars()
@@ -70,7 +53,11 @@ def main():
 def generate_summary_table(all_files, file_summaries):
     """Tạo bảng PR Summary dưới dạng chuỗi Markdown."""
     table_header = "| Files | Change Summary |\n|---|---|"
-    table_rows = [f"| {file} | {summary} |" for file, summary in zip(all_files, file_summaries)]
+    table_rows = []
+    for file, summary in zip(all_files, file_summaries):
+        row = f"| {file} | {summary} |"
+        table_rows.append(row)
+        print(f"Debug: Row = {row}")
     return "\n".join([table_header] + table_rows)
 
 def update_pr_summary(changed_files, ai, github):
@@ -108,6 +95,8 @@ def update_pr_summary(changed_files, ai, github):
             file_summaries.append(f"File not found: {file}")  # Thêm thông báo lỗi vào summary
 
     # Tạo bảng PR Summary
+    print(f"all_files: {all_files}") 
+    print(f"file_summaries: {file_summaries}")
     summary_table = generate_summary_table(all_files, file_summaries)
 
     # Tạo comment chứa danh sách file
