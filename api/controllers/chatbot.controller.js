@@ -14,7 +14,7 @@ export const importdata = async (req, res, next) => {
     })
     try {
         const saveData = await newData.save()
-        res.status(201).json(saveData)
+        res.status(201).json(saveDataacs)
     } catch (error) {
         next(error)
     }

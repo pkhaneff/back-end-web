@@ -135,7 +135,7 @@ def process_file(file, ai, github, vars):
             Log.print_red(f"Error during AI request: {e}")
             continue
 
-        if response and not AiBot.is_no_issues_text(response): # This line has been updated
+        if response and not AiBot.is_no_issues_text(response):
             comments = AiBot.split_ai_response(response, diff_chunk, file_path=file)
             existing_comments = github.get_comments()
             existing_comment_bodies = {c['body'] for c in existing_comments}
@@ -153,12 +153,13 @@ def process_file(file, ai, github, vars):
                             Log.print_red(f"Failed to post review comment: {e}")
                         except Exception as e:
                             Log.print_red(f"Unexpected error: {e}")
-                        else:
-                            Log.print_yellow(f"Skipping comment: Comment already exists")
+                    else:
+                        Log.print_yellow(f"Skipping comment: Comment already exists")
                 else:
                     Log.print_yellow(f"Skipping comment because no content.")
         else:
              Log.print_green(f"No critical issues found in diff chunk, skipping comments.")
+             continue 
 
 
 def parse_ai_suggestions(response):
