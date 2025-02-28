@@ -49,7 +49,7 @@ def main():
         process_file(file, ai, github, vars)
 
 def generate_summary_table(all_files, file_summaries):
-    """Tạo bảng PR Summary dưới dạng chuỗi Markdown."""
+    """Creates a PR Summary table as a Markdown string."""
     table_header = "| Files | Change Summary |\n|---|---|"
     table_rows = []
 
@@ -62,32 +62,13 @@ def generate_summary_table(all_files, file_summaries):
 
     for file, summary in zip(all_files, file_summaries):
         # Escape Markdown special characters
-        file_escaped = escape_markdown(file)
-        # Replace newlines with <br> and escape Markdown special characters
-        summary_escaped = escape_markdown(summary.replace("\n", "<br>"))
-        # Limit summary length
-        summary_escaped = summary_escaped[:500] + "..." if len(summary_escaped) > 500 else summary_escaped
+        file_escaped = file.replace("|", "\\|").replace("*", "\\*").replace("_", "\\_")
+        summary_escaped = summary.replace("|", "\\|").replace("*", "\\*").replace("_", "\\_")
 
         row = f"| {file_escaped} | {summary_escaped} |"
         table_rows.append(row)
-        print(f"Debug: Row = {row}") # In ra từng hàng để kiểm tra
-
-    if not table_rows:
-        return "No changes to summarize."
-
+        print(f"Debug: Row = {row}") # Debugging each row
     return "\n".join([table_header] + table_rows)
-
-def escape_markdown(text):
-    """Escape Markdown special characters."""
-    text = text.replace("\\", "\\\\")  # Escape backslashes first
-    text = text.replace("|", "|")
-    text = text.replace("*", "\\*")
-    text = text.replace("_", "\\_")
-    text = text.replace("`", "\\`")
-    text = text.replace("#", "\\#")
-    text = text.replace("<", "<")
-    text = text.replace(">", ">")
-    return text
 
 def update_pr_summary(changed_files, ai, github):
     Log.print_green("Updating PR description...")
@@ -111,7 +92,12 @@ def update_pr_summary(changed_files, ai, github):
         try:
             with open(file, 'r', encoding="utf-8", errors="replace") as f:
                 content = f.read()
-                new_summary = ai.ai_request_summary(file_changes={file:content[:1000]}, prompt=SUMMARY_PROMPT.format(file_name=file, file_content=content[:1000]))
+                # Modify prompt to focus on business impact/purpose
+                business_prompt = SUMMARY_PROMPT.replace(
+                    "Hãy mô tả các thay đổi trong file sau đây theo phong cách ngắn gọn",
+                    "Hãy tóm tắt mục đích kinh doanh hoặc tác động của các thay đổi trong file sau đây."
+                )
+                new_summary = ai.ai_request_summary(file_changes={file:content[:1000]}, prompt=business_prompt)
                 file_summaries.append(new_summary)
         except FileNotFoundError:
             Log.print_yellow(f"File not found: {file}")
@@ -141,6 +127,7 @@ def update_pr_summary(changed_files, ai, github):
         Log.print_yellow("PR description updated successfully!")
     except RepositoryError as e:
         Log.print_red(f"Failed to update PR description: {e}")
+
 
 def process_file(file, ai, github, vars):
     Log.print_green(f"Reviewing file: {file}")
