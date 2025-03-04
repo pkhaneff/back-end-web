@@ -5,7 +5,7 @@ from git_utils import GitUtils
 from ai.chat_gpt import ChatGPT
 from log import Log
 from ai.ai_bot import AiBot
-from ai.prompts import NEW_FEATURE_PROMPT, REFACTOR_PROMPT 
+from ai.prompts import SUMMARY_PROMPT
 from env_vars import EnvVars
 from repository.github import GitHub
 from repository.repository import RepositoryError
@@ -50,7 +50,7 @@ def main():
 
 def generate_summary_table(all_files, file_summaries):
     """Creates a PR Summary table as a Markdown string."""
-    table_header = "| Files | Change Summary |\n|-------|---------------------------------|"  # Tỉ lệ 4:6
+    table_header = "| <div style='width:40%'>Files</div> | <div style='width:60%'>Change Summary</div> |\n|---------------------|----------------------------------------------------|"
     table_rows = []
 
     print(f"Debug: all_files = {all_files}")
@@ -61,14 +61,11 @@ def generate_summary_table(all_files, file_summaries):
         Log.print_red(f"all_files length: {len(all_files)}, file_summaries length: {len(file_summaries)}")
         return "Error: Mismatched file and summary counts. Please check the logs."
 
-    for file_data in file_summaries:  # Thay đổi vòng lặp
-        file = file_data["file"]
-        # Escape ký tự đặc biệt và xuống dòng
+    for file, summary in zip(all_files, file_summaries):
         file_escaped = str(file).replace("|", "|").replace("*", "*").replace("_", "_").replace("\n", "<br>")
-
-        # Tạo summary chung (ví dụ: kết hợp new_feature và refactor)
-        summary = f"**New Feature:** {file_data['new_feature']}<br>**Refactor:** {file_data['refactor']}"
-        summary_escaped = summary.replace("|", "|").replace("*", "*").replace("_", "_").replace("\n", "<br>")
+        summary_escaped = str(summary).replace("|", "|").replace("*", "*").replace("_", "_").replace("\n", "<br>")
+        
+        summary_escaped = re.sub(r"^\s*[-•]\s*", "", summary_escaped, flags=re.MULTILINE)
 
         row = f"| {file_escaped} | {summary_escaped} |"
         table_rows.append(row)
@@ -98,60 +95,30 @@ def update_pr_summary(changed_files, ai, github):
         try:
             with open(file, 'r', encoding="utf-8", errors="replace") as f:
                 content = f.read()
-
-                escaped_content = content.replace("{", "{{").replace("}", "}}")
-
-                new_feature_summary = ai.ai_request_summary(
-                    file_changes={file: escaped_content[:1500]},  
-                    prompt=NEW_FEATURE_PROMPT,
-                    file_name=file,
-                    file_content=escaped_content[:1500]  
-                )
-
-                refactor_summary = ai.ai_request_summary(
-                    file_changes={file: escaped_content[:1500]},  
-                    prompt=REFACTOR_PROMPT,
-                    file_name=file,
-                    file_content=escaped_content[:1500]  
-                )
-
-                file_summaries.append({
-                    "file": file,
-                    "new_feature": new_feature_summary,
-                    "refactor": refactor_summary
-                })
-
+                new_summary = ai.ai_request_summary(file_changes={file:content[:1500]})
+                file_summaries.append(new_summary)
         except FileNotFoundError:
             Log.print_yellow(f"File not found: {file}")
-            file_summaries.append({"file": file, "new_feature": f"File not found: {file}", "refactor": f"File not found: {file}"})
+            file_summaries.append(f"File not found: {file}")
         except Exception as e:
             Log.print_red(f"Error processing file {file}: {e}")
-            file_summaries.append({"file": file, "new_feature": f"Error processing file {file}: {e}", "refactor": f"Error processing file {file}: {e}"})
+            file_summaries.append(f"Error processing file {file}: {e}")
 
     print(f"all_files: {all_files}")
     print(f"file_summaries: {file_summaries}")
-
     summary_table = generate_summary_table(all_files, file_summaries)
 
-    comment_body = f"""## New Features:
-{ "".join([f"* {s['file']}: {s['new_feature']}\n" for s in file_summaries]) }
-
-## Refactor:
-{ "".join([f"* {s['file']}: {s['refactor']}\n" for s in file_summaries]) }
-
-{summary_table}
-"""
-
+    # files_comment = f"{PR_SUMMARY_FILES_IDENTIFIER}{json.dumps(all_files)}{PR_SUMMARY_FILES_IDENTIFIER}"  # Loại bỏ dòng này
 
     if PR_SUMMARY_COMMENT_IDENTIFIER in current_body:
         updated_body = re.sub(
             f"{PR_SUMMARY_COMMENT_IDENTIFIER}.*",
-            f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n{comment_body}",
+            f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}",  # Loại bỏ files_comment
             current_body,
             flags=re.DOTALL
         )
     else:
-        updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n{comment_body}\n\n{current_body}"
+        updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}\n\n{current_body}"  # Loại bỏ files_comment
 
     try:
         github.update_pull_request(updated_body)

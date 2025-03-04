@@ -39,28 +39,18 @@ CHAT_GPT_ASK_LONG = """
     *   Ignore minor coding style discrepancies or subjective preferences.
 """
 
-NEW_FEATURE_PROMPT = """
-    Bạn là một chuyên gia tóm tắt các tính năng mới trong code.
-    Hãy tóm tắt **ngắn gọn** (tối đa 3 câu) các tính năng mới được thêm vào trong PR này.
-    Tập trung vào việc mô tả **chức năng** của tính năng mới, và **lợi ích** mà nó mang lại cho người dùng hoặc hệ thống.
-    Sử dụng giọng văn rõ ràng, không kỹ thuật và dễ hiểu.
+SUMMARY_PROMPT = """
+    Bạn là một chuyên gia tạo mô tả ngắn gọn cho bảng tóm tắt thay đổi code.
+    Hãy tóm tắt **ngắn gọn** (tối đa 2 câu) các thay đổi chính trong file sau đây.
+    Tập trung vào việc mô tả **những thay đổi** nào đã được thực hiện, thay vì lý do kinh doanh.
+    Sử dụng giọng văn rõ ràng, không kỹ thuật và dễ hiểu cho người không phải là lập trình viên.
+    **Chỉ cần nêu tổng quan về các thay đổi, không cần chi tiết.**
 
     Ví dụ:
-    - Thêm API để quản lý đơn hàng, giúp người dùng dễ dàng theo dõi và cập nhật trạng thái đơn hàng.
+    - Thêm hàm xử lý lỗi mới và cập nhật logic xác thực dữ liệu.
+    - Chỉnh sửa giao diện người dùng và cập nhật thư viện bên thứ ba.
 
-    Nội dung thay đổi:
-    {file_content}
-    """
-
-REFACTOR_PROMPT = """
-    Bạn là một chuyên gia tóm tắt các thay đổi refactor trong code.
-    Hãy tóm tắt **ngắn gọn** (tối đa 3 câu) những thay đổi refactor được thực hiện trong PR này.
-    Tập trung vào việc mô tả **những gì** đã được cấu trúc lại, và **tại sao** lại cấu trúc lại (ví dụ: để cải thiện khả năng đọc, hiệu suất, hoặc bảo trì).
-    Sử dụng giọng văn rõ ràng, không kỹ thuật và dễ hiểu.
-
-    Ví dụ:
-    - Cấu trúc lại module xác thực để cải thiện khả năng đọc và giảm độ phức tạp.
-
+    File: {file_name}
     Nội dung thay đổi:
     {file_content}
     """
