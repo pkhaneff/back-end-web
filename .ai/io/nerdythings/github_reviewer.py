@@ -53,21 +53,20 @@ def generate_summary_table(all_files, file_summaries):
     table_header = "| Files | Change Summary |\n|---|---|"
     table_rows = []
 
-    print(f"Debug: all_files = {all_files}")  # Debugging
-    print(f"Debug: file_summaries = {file_summaries}")  # Debugging
+    print(f"Debug: all_files = {all_files}")
+    print(f"Debug: file_summaries = {file_summaries}") 
 
     if len(all_files) != len(file_summaries):
         Log.print_red("Error: all_files and file_summaries have different lengths!")
         return "Error: Mismatched file and summary counts."
 
     for file, summary in zip(all_files, file_summaries):
-        # Escape Markdown special characters
         file_escaped = file.replace("|", "\\|").replace("*", "\\*").replace("_", "\\_")
         summary_escaped = summary.replace("|", "\\|").replace("*", "\\*").replace("_", "\\_")
 
         row = f"| {file_escaped} | {summary_escaped} |"
         table_rows.append(row)
-        print(f"Debug: Row = {row}") # Debugging each row
+        print(f"Debug: Row = {row}")
     return "\n".join([table_header] + table_rows)
 
 def update_pr_summary(changed_files, ai, github):

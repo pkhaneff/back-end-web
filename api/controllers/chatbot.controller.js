@@ -20,12 +20,12 @@ export const importdata = async (req, res, next) => {
     }
 }
 
-export const getdata = async (req, res, next) => {
+export const = async (req, res, next) => {
     if(!req.user.isAdmin) return next(errorHandler(403,'You are not allowed to get all data chatbot'))
     try {
         const chatbots = await Chatbot.find();
 
-        if (!chatbots || chatbots.length === 0) {
+        if (!chatbots chatbots.length === 0) {
             return res.status(404).json({ message: 'No chatbots found' });
         }
 
