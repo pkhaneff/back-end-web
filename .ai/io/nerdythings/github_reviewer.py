@@ -44,16 +44,12 @@ def main():
 
     Log.print_yellow(f"Filtered changed files: {changed_files}")
 
-    file_summaries = update_pr_summary(changed_files, ai, github)
-
     for file in changed_files:
         process_file(file, ai, github, vars)
 
-    #Generate and post the owner comment
-    owner_comment = generate_owner_comment(changed_files, github, vars)
-    if owner_comment:
-      post_or_update_owner_comment(github, owner_comment)
-
+    #Generate and post the combined comment
+    combined_comment = generate_combined_comment(changed_files, ai, github, vars) #Passed AI
+    post_or_update_combined_comment(github, combined_comment)
 
 
 def generate_summary_table(file_summaries):
@@ -76,7 +72,7 @@ def generate_summary_table(file_summaries):
     return "\n".join([table_header] + table_rows)
 
 
-def update_pr_summary(changed_files, ai, github):
+def update_pr_summary(changed_files, ai, github): #THIS ENTIRE FUNCTION IS NOT NEEDED SINCE I NEED TO REMOVE IT
     Log.print_green("Updating PR description...")
 
     pr_data = github.get_pull_request()
@@ -108,25 +104,25 @@ def update_pr_summary(changed_files, ai, github):
             Log.print_red(f"Error processing file {file}: {e}")
             file_summaries[file] = f"Error processing file {file}: {e}"
 
-    summary_table = generate_summary_table(file_summaries)
+    #summary_table = generate_summary_table(file_summaries)
     files_comment = "" #Empty this out since we removed the files storing
 
 
-    if PR_SUMMARY_COMMENT_IDENTIFIER in current_body:
-        updated_body = re.sub(
-            f"{PR_SUMMARY_COMMENT_IDENTIFIER}.*",
-            f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}\n{files_comment}",
-            current_body,
-            flags=re.DOTALL
-        )
-    else:
-        updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}\n{files_comment}\n\n{current_body}"
+    #if PR_SUMMARY_COMMENT_IDENTIFIER in current_body:
+    #    updated_body = re.sub(
+    #        f"{PR_SUMMARY_COMMENT_IDENTIFIER}.*",
+    #        f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}\n{files_comment}",
+    #        current_body,
+    #        flags=re.DOTALL
+    #    )
+    #else:
+    #    updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}\n{files_comment}\n\n{current_body}"
 
-    try:
-        github.update_pull_request(updated_body)
-        Log.print_yellow("PR description updated successfully!")
-    except RepositoryError as e:
-        Log.print_red(f"Failed to update PR description: {e}")
+    #try:
+    #    github.update_pull_request(updated_body)
+    #    Log.print_yellow("PR description updated successfully!")
+    #except RepositoryError as e:
+    #    Log.print_red(f"Failed to update PR description: {e}")
 
     return file_summaries #Returning for the owner comment
 
@@ -256,8 +252,7 @@ def parse_ai_suggestions(response):
 def generate_owner_comment(changed_files, github, vars):
     """Generates the owner's comment with dropdowns for each changed file."""
 
-    comment = f"{OWNER_COMMENT_IDENTIFIER}\n## Owner's Review Notes\n"
-    comment += "<details>\n"
+    comment = "<details>\n"
     comment += "  <summary><b>List Change History</b></summary>\n\n"
 
     for file in changed_files:
@@ -293,31 +288,55 @@ def generate_owner_comment(changed_files, github, vars):
     comment += "</details>\n"
     return comment
 
-def post_or_update_owner_comment(github, comment):
-    """Posts a new comment or updates an existing one."""
+def generate_combined_comment(changed_files, ai, github, vars):
+    """Generates the combined comment containing the summary table and owner's notes."""
+    file_summaries = get_business_summaries(changed_files, ai)
+    summary_table = generate_summary_table(file_summaries)
+    owner_notes = generate_owner_comment(changed_files, github, vars)
+
+    comment = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}\n\n{OWNER_COMMENT_IDENTIFIER}\n## Owner's Review Notes\n{owner_notes}"
+    return comment
+
+def get_business_summaries(changed_files, ai):
+    """Gets the business summaries for changed files."""
+    file_summaries = {}
+    for file in changed_files:
+        try:
+            with open(file, 'r', encoding="utf-8", errors="replace") as f:
+                content = f.read()
+                new_summary = ai.ai_request_summary(file_changes={file:content[:1500]}, summary_prompt=SUMMARY_PROMPT)
+                file_summaries[file] = new_summary
+        except FileNotFoundError:
+            Log.print_yellow(f"File not found: {file}")
+            file_summaries[file] = f"File not found: {file}"
+        except Exception as e:
+            Log.print_red(f"Error processing file {file}: {e}")
+            file_summaries[file] = f"Error processing file {file}: {e}"
+    return file_summaries
+
+def post_or_update_combined_comment(github, comment):
+    """Posts a new combined comment or updates an existing one."""
     existing_comments = github.get_comments()
-    owner_comment_exists = False
+    summary_comment_exists = False
 
     for existing_comment in existing_comments:
-        if OWNER_COMMENT_IDENTIFIER in existing_comment['body']:
-            Log.print_yellow("Updating existing owner comment...")
+        if PR_SUMMARY_COMMENT_IDENTIFIER in existing_comment['body']:
+            Log.print_yellow("Updating existing PR summary comment with combined content...")
             try:
                 github.update_comment(existing_comment['id'], comment)
-                Log.print_green("Owner comment updated successfully!")
+                Log.print_green("Combined comment updated successfully!")
             except RepositoryError as e:
-                Log.print_red(f"Failed to update owner comment: {e}")
-            owner_comment_exists = True
+                Log.print_red(f"Failed to update combined comment: {e}")
+            summary_comment_exists = True
             break
 
-    if not owner_comment_exists:
-        Log.print_yellow("Posting new owner comment...")
+    if not summary_comment_exists:
+        Log.print_yellow("Posting new combined comment...")
         try:
             github.post_comment_general(comment)
-            Log.print_green("Owner comment posted successfully!")
+            Log.print_green("Combined comment posted successfully!")
         except RepositoryError as e:
-            Log.print_red(f"Failed to post owner comment: {e}")
-
-
+            Log.print_red(f"Failed to post combined comment: {e}")
 
 if __name__ == "__main__":
     main()
