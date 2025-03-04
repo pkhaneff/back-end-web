@@ -14,12 +14,12 @@ class ChatGPT(AiBot):
         try:
             response = self.__client.chat.completions.create(
                 messages=[{
-                    "role": "user", 
+                    "role": "user",
                     "content": AiBot.build_ask_text(code=code, diffs=diffs)
                 }],
                 model=self.__chat_gpt_model,
                 stream=False,
-                max_tokens=4096  
+                max_tokens=4096
             )
 
             print("🔍 Raw response:", response)
@@ -38,18 +38,17 @@ class ChatGPT(AiBot):
             print(f"🚨 API Error: {e}")
             print(traceback.format_exc())
             return f"❌ Error occurred: {str(e)}"
-        
-    import json
 
-    def ai_request_summary(self, file_changes, prompt):  # Thêm tham số prompt
+
+    def ai_request_summary(self, file_changes, summary_prompt=None):  # Đổi tên prompt thành summary_prompt để rõ ràng hơn
         try:
-            print(f"🔍 Debug: type(file_changes) = {type(file_changes)}")  
+            print(f"🔍 Debug: type(file_changes) = {type(file_changes)}")
             print(f"🔍 Debug: file_changes keys = {list(file_changes.keys())}")
             print(f"🔍 Debug: file_changes (type: {type(file_changes)}): {str(file_changes)[:200]}")
 
             if isinstance(file_changes, str):
                 try:
-                    file_changes = json.loads(file_changes)  
+                    file_changes = json.loads(file_changes)
                 except json.JSONDecodeError:
                     raise ValueError("⚠️ file_changes là string nhưng không phải JSON hợp lệ!")
 
@@ -57,15 +56,29 @@ class ChatGPT(AiBot):
                 raise ValueError(f"⚠️ file_changes phải là một dictionary! Nhận: {type(file_changes)}")
 
             # Tạo request cho ChatGPT
-            summary_request = ""
+            messages = []
             for file_name, file_content in file_changes.items():
-                summary_request = prompt.format(file_name=file_name, file_content=file_content)
+                # Check if summary_prompt is available to inject variables
+                if summary_prompt:
+                    try:
+                        summary_request = summary_prompt.format(file_name=file_name, file_content=file_content)
+                    except KeyError as e:
+                        print(f"❌ KeyError: {e}.  Check your summary_prompt for correct variable names.")
+                        summary_request = f"Tóm tắt những thay đổi trong file {file_name}:\n{file_content}"  # Fallback
+                    except Exception as e:
+                        print(f"❌ Error formatting summary_prompt: {e}")
+                        summary_request = f"Tóm tắt những thay đổi trong file {file_name}:\n{file_content}"  # Fallback
+                else:
+                    summary_request = f"Tóm tắt những thay đổi trong file {file_name}:\n{file_content}"
+
+                messages.append({"role": "user", "content": summary_request})
+
 
             response = self.__client.chat.completions.create(
-                messages=[{"role": "user", "content": summary_request}],
+                messages=messages,  # Use the list of messages we created.
                 model=self.__chat_gpt_model,
                 stream=False,
-                max_tokens=2048  
+                max_tokens=2048
             )
 
             if response and response.choices and len(response.choices) > 0:
