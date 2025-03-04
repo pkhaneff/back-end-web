@@ -74,19 +74,10 @@ def update_pr_summary(changed_files, ai, github):
     pr_data = github.get_pull_request()
     current_body = pr_data.get("body") or ""
 
-    existing_files = []
-    match = re.search(f"{PR_SUMMARY_FILES_IDENTIFIER}(.*){PR_SUMMARY_FILES_IDENTIFIER}", current_body, re.DOTALL)
-    if match:
-        try:
-            existing_files = json.loads(match.group(1).strip())
-        except json.JSONDecodeError:
-            Log.print_red("Error decoding existing files list. Resetting list.")
-            existing_files = []
-
-    all_files = list(set(changed_files + existing_files))
+    # Removed the logic to store and retrieve existing files
 
     file_summaries = {}
-    for file in all_files:
+    for file in changed_files: #Only process current changes
         try:
             with open(file, 'r', encoding="utf-8", errors="replace") as f:
                 content = f.read()
@@ -101,7 +92,10 @@ def update_pr_summary(changed_files, ai, github):
             file_summaries[file] = f"Error processing file {file}: {e}"
 
     summary_table = generate_summary_table(file_summaries)
-    files_comment = f"{PR_SUMMARY_FILES_IDENTIFIER}{json.dumps(all_files)}{PR_SUMMARY_FILES_IDENTIFIER}"
+    # Removed storing the all_files
+    #files_comment = f"{PR_SUMMARY_FILES_IDENTIFIER}{json.dumps(all_files)}{PR_SUMMARY_FILES_IDENTIFIER}"
+    files_comment = "" #Empty this out since we removed the files storing
+
 
     if PR_SUMMARY_COMMENT_IDENTIFIER in current_body:
         updated_body = re.sub(
