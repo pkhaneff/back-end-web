@@ -50,7 +50,7 @@ def main():
 
 def generate_summary_table(all_files, file_summaries):
     """Creates a PR Summary table as a Markdown string."""
-    table_header = "| Files | Business Summary |\n|------------|----------------|"  
+    table_header = "| <div style='width:40%'>Files</div> | <div style='width:60%'>Change Summary</div> |\n|---------------------|----------------------------------------------------|"
     table_rows = []
 
     print(f"Debug: all_files = {all_files}")
