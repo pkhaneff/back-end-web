@@ -40,15 +40,15 @@ CHAT_GPT_ASK_LONG = """
 """
 
 SUMMARY_PROMPT = """
-    Bạn là một chuyên gia tạo mô tả ngắn gọn cho bảng tóm tắt thay đổi code. 
-    Hãy tóm tắt **ngắn gọn** (tối đa 2 câu) mục đích kinh doanh hoặc tác động của các thay đổi trong file sau đây. 
-    Tập trung vào lý do thay đổi được thực hiện và giá trị chính mà nó mang lại cho người dùng hoặc hệ thống. 
+    Bạn là một chuyên gia tạo mô tả ngắn gọn cho bảng tóm tắt thay đổi code.
+    Hãy tóm tắt **ngắn gọn** (tối đa 2 câu) các thay đổi chính trong file sau đây.
+    Tập trung vào việc mô tả **những thay đổi** nào đã được thực hiện, thay vì lý do kinh doanh.
     Sử dụng giọng văn rõ ràng, không kỹ thuật và dễ hiểu cho người không phải là lập trình viên.
-    **Chỉ tập trung vào điểm quan trọng nhất của thay đổi.**
+    **Chỉ cần nêu tổng quan về các thay đổi, không cần chi tiết.**
 
     Ví dụ:
-    - Thêm chức năng tìm kiếm mới để người dùng dễ dàng tìm thấy thông tin họ cần.
-    - Cập nhật giao diện người dùng để cải thiện trải nghiệm người dùng trên thiết bị di động.
+    - Thêm hàm xử lý lỗi mới và cập nhật logic xác thực dữ liệu.
+    - Chỉnh sửa giao diện người dùng và cập nhật thư viện bên thứ ba.
 
     File: {file_name}
     Nội dung thay đổi:
