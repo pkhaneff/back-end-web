@@ -53,7 +53,7 @@ def generate_summary_table(file_summaries):
     table_header = "| <div style='width:40%'>Files</div> | <div style='width:60%'>Change Summary</div> |\n|---------------------|----------------------------------------------------|"
     table_rows = []
 
-    for file, summary in file_summaries.items():  # Iterate through the dictionary
+    for file, summary in file_summaries.items():
         file_escaped = str(file).replace("|", "|").replace("*", "*").replace("_", "_").replace("\n", "<br>")
         summary_escaped = str(summary).replace("|", "|").replace("*", "*").replace("_", "_").replace("\n", "<br>")
         
@@ -63,7 +63,7 @@ def generate_summary_table(file_summaries):
         table_rows.append(row)
 
     if not table_rows:
-        return "No summaries available."  # Handle the case where there are no summaries
+        return "No summaries available."
 
     return "\n".join([table_header] + table_rows)
 
@@ -85,7 +85,6 @@ def update_pr_summary(changed_files, ai, github):
 
     all_files = list(set(changed_files + existing_files))
 
-    # Use a dictionary to store file: summary pairs
     file_summaries = {}
     for file in all_files:
         try:
@@ -95,23 +94,23 @@ def update_pr_summary(changed_files, ai, github):
                 file_summaries[file] = new_summary
         except FileNotFoundError:
             Log.print_yellow(f"File not found: {file}")
-            file_summaries[file] = f"File not found: {file}"  # Store the error message
+            file_summaries[file] = f"File not found: {file}"
         except Exception as e:
             Log.print_red(f"Error processing file {file}: {e}")
-            file_summaries[file] = f"Error processing file {file}: {e}" # Store the error message
-    summary_table = generate_summary_table(file_summaries)
+            file_summaries[file] = f"Error processing file {file}: {e}"
 
-    # files_comment = f"{PR_SUMMARY_FILES_IDENTIFIER}{json.dumps(all_files)}{PR_SUMMARY_FILES_IDENTIFIER}"  # Loại bỏ dòng này
+    summary_table = generate_summary_table(file_summaries)
+    files_comment = f"{PR_SUMMARY_FILES_IDENTIFIER}{json.dumps(all_files)}{PR_SUMMARY_FILES_IDENTIFIER}"
 
     if PR_SUMMARY_COMMENT_IDENTIFIER in current_body:
         updated_body = re.sub(
             f"{PR_SUMMARY_COMMENT_IDENTIFIER}.*",
-            f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}",  # Loại bỏ files_comment
+            f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}\n{files_comment}",
             current_body,
             flags=re.DOTALL
         )
     else:
-        updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}\n\n{current_body}"  # Loại bỏ files_comment
+        updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}\n{files_comment}\n\n{current_body}"
 
     try:
         github.update_pull_request(updated_body)

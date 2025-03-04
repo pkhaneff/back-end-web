@@ -35,7 +35,7 @@ export const updateUser = async ( req, res, next ) => {
             $set:{
                 username: req.body.username,
                 email: req.body.email,
-                profilePicture: req.body.profilePicture,
+                profilePicture: req.body.profilePocture,
                 password: req.body.password
             }
         }, {new: true})
