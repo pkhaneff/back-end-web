@@ -50,24 +50,28 @@ def main():
 
 def generate_summary_table(all_files, file_summaries):
     """Creates a PR Summary table as a Markdown string."""
-    table_header = "| Files | Change Summary |\n|---|---|"
+    table_header = "| Files | Change Summary |\n|---|---| "  
     table_rows = []
 
     print(f"Debug: all_files = {all_files}")
-    print(f"Debug: file_summaries = {file_summaries}") 
+    print(f"Debug: file_summaries = {file_summaries}")
 
     if len(all_files) != len(file_summaries):
         Log.print_red("Error: all_files and file_summaries have different lengths!")
-        return "Error: Mismatched file and summary counts."
+        Log.print_red(f"all_files length: {len(all_files)}, file_summaries length: {len(file_summaries)}")
+        return "Error: Mismatched file and summary counts. Please check the logs."
 
     for file, summary in zip(all_files, file_summaries):
-        file_escaped = file.replace("|", "\\|").replace("*", "\\*").replace("_", "\\_")
-        summary_escaped = summary.replace("|", "\\|").replace("*", "\\*").replace("_", "\\_")
+        file_escaped = str(file).replace("|", "|").replace("*", "*").replace("_", "_").replace("\n", "<br>")
+        summary_escaped = str(summary).replace("|", "|").replace("*", "*").replace("_", "_").replace("\n", "<br>")
+        
+        summary_escaped = re.sub(r"^\s*[-•]\s*", "", summary_escaped, flags=re.MULTILINE)
 
         row = f"| {file_escaped} | {summary_escaped} |"
         table_rows.append(row)
         print(f"Debug: Row = {row}")
     return "\n".join([table_header] + table_rows)
+
 
 def update_pr_summary(changed_files, ai, github):
     Log.print_green("Updating PR description...")
