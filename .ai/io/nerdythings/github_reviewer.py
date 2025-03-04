@@ -74,14 +74,23 @@ def update_pr_summary(changed_files, ai, github):
     pr_data = github.get_pull_request()
     current_body = pr_data.get("body") or ""
 
-    # Removed the logic to store and retrieve existing files
+    # Extract existing summaries from the PR body
+    existing_summaries = {}
+    summary_table_match = re.search(f"{PR_SUMMARY_COMMENT_IDENTIFIER}.*?\n(.*?)(\n{PR_SUMMARY_FILES_IDENTIFIER}|\n\n)", current_body, re.DOTALL)
+    if summary_table_match:
+        summary_table_markdown = summary_table_match.group(1).strip()
+        # Parse the markdown table to extract existing summaries
+        existing_summaries = parse_summary_table(summary_table_markdown) # Function to parse is created below
+    else:
+        Log.print_yellow("No existing summary table found.")
 
-    file_summaries = {}
-    for file in changed_files: #Only process current changes
+    file_summaries = existing_summaries.copy()  # Start with existing summaries
+
+    # Generate summaries for new/modified files
+    for file in changed_files:
         try:
             with open(file, 'r', encoding="utf-8", errors="replace") as f:
                 content = f.read()
-                # Pass SUMMARY_PROMPT here:
                 new_summary = ai.ai_request_summary(file_changes={file:content[:1500]}, summary_prompt=SUMMARY_PROMPT)
                 file_summaries[file] = new_summary
         except FileNotFoundError:
@@ -92,8 +101,6 @@ def update_pr_summary(changed_files, ai, github):
             file_summaries[file] = f"Error processing file {file}: {e}"
 
     summary_table = generate_summary_table(file_summaries)
-    # Removed storing the all_files
-    #files_comment = f"{PR_SUMMARY_FILES_IDENTIFIER}{json.dumps(all_files)}{PR_SUMMARY_FILES_IDENTIFIER}"
     files_comment = "" #Empty this out since we removed the files storing
 
 
@@ -112,6 +119,37 @@ def update_pr_summary(changed_files, ai, github):
         Log.print_yellow("PR description updated successfully!")
     except RepositoryError as e:
         Log.print_red(f"Failed to update PR description: {e}")
+
+
+def parse_summary_table(markdown_table):
+    """Parses the summary table from markdown to extract existing summaries."""
+    file_summaries = {}
+    rows = markdown_table.strip().split('\n')
+
+    # Check if there is a header row and a separator row:
+    if len(rows) < 3:
+        return file_summaries
+
+    # Check if it is a valid markdown table
+    if not rows[1].startswith("|---"):
+        return file_summaries
+
+    #Skip the header and separator row
+    for row in rows[2:]:
+        parts = row.split('|')
+        if len(parts) != 3:  # Expecting | File | Summary |
+            continue
+
+        file_name = parts[1].strip()
+        summary = parts[2].strip()
+
+        # Unescape markdown characters:
+        file_name = file_name.replace("\\|", "|").replace("\\*", "*").replace("\\_", "_").replace("<br>", "\n")
+        summary = summary.replace("\\|", "|").replace("\\*", "*").replace("\\_", "_").replace("<br>", "\n")
+
+        file_summaries[file_name] = summary
+
+    return file_summaries
 
 def process_file(file, ai, github, vars):
     Log.print_green(f"Reviewing file: {file}")
