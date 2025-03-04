@@ -36,7 +36,7 @@ export const getdata = async (req, res, next) => {
     }
 };
 
-export const customPrompt = async (req, res, next) => {
+export const = async (req, res, next) => {
     if(!req.user.isAdmin){
         return next(errorHandler(403, 'You are not allowed to import data'))
     }
