@@ -95,12 +95,7 @@ def update_pr_summary(changed_files, ai, github):
         try:
             with open(file, 'r', encoding="utf-8", errors="replace") as f:
                 content = f.read()
-                # Modify prompt to focus on business impact/purpose
-                business_prompt = SUMMARY_PROMPT.replace(
-                    "Hãy tóm tắt mục đích kinh doanh hoặc tác động của các thay đổi trong file sau đây.",
-                    "Hãy tóm tắt chi tiết (từ 3-5 dòng) mục đích kinh doanh hoặc tác động của các thay đổi trong file sau đây. Mô tả rõ ràng vấn đề nào được giải quyết, giá trị nào được mang lại cho người dùng hoặc hệ thống, và cách thay đổi này ảnh hưởng đến trải nghiệm người dùng hoặc hiệu suất hệ thống."
-                )
-                new_summary = ai.ai_request_summary(file_changes={file:content[:1500]}, prompt=business_prompt)
+                new_summary = ai.ai_request_summary(file_changes={file:content[:1500]})
                 file_summaries.append(new_summary)
         except FileNotFoundError:
             Log.print_yellow(f"File not found: {file}")
@@ -113,17 +108,17 @@ def update_pr_summary(changed_files, ai, github):
     print(f"file_summaries: {file_summaries}")
     summary_table = generate_summary_table(all_files, file_summaries)
 
-    files_comment = f"{PR_SUMMARY_FILES_IDENTIFIER}{json.dumps(all_files)}{PR_SUMMARY_FILES_IDENTIFIER}"
+    # files_comment = f"{PR_SUMMARY_FILES_IDENTIFIER}{json.dumps(all_files)}{PR_SUMMARY_FILES_IDENTIFIER}"  # Loại bỏ dòng này
 
     if PR_SUMMARY_COMMENT_IDENTIFIER in current_body:
         updated_body = re.sub(
             f"{PR_SUMMARY_COMMENT_IDENTIFIER}.*",
-            f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}\n\n{files_comment}",
+            f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}",  # Loại bỏ files_comment
             current_body,
             flags=re.DOTALL
         )
     else:
-        updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}\n\n{files_comment}\n\n{current_body}"
+        updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}\n\n{current_body}"  # Loại bỏ files_comment
 
     try:
         github.update_pull_request(updated_body)
