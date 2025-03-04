@@ -91,7 +91,7 @@ def update_pr_summary(changed_files, ai, github):
             with open(file, 'r', encoding="utf-8", errors="replace") as f:
                 content = f.read()
                 # Pass SUMMARY_PROMPT here:
-                new_summary = ai.ai_request_summary(file_changes={file:content[:1500]}, prompt=SUMMARY_PROMPT)
+                new_summary = ai.ai_request_summary(file_changes={file:content[:1500]}, summary_prompt=SUMMARY_PROMPT)
                 file_summaries[file] = new_summary
         except FileNotFoundError:
             Log.print_yellow(f"File not found: {file}")

@@ -40,7 +40,7 @@ class ChatGPT(AiBot):
             return f"❌ Error occurred: {str(e)}"
 
 
-    def ai_request_summary(self, file_changes, prompt=None):  # Thêm tham số prompt và giá trị mặc định None
+    def ai_request_summary(self, file_changes, summary_prompt=None):  # Đổi tên prompt thành summary_prompt để rõ ràng hơn
         try:
             print(f"🔍 Debug: type(file_changes) = {type(file_changes)}")
             print(f"🔍 Debug: file_changes keys = {list(file_changes.keys())}")
@@ -56,17 +56,26 @@ class ChatGPT(AiBot):
                 raise ValueError(f"⚠️ file_changes phải là một dictionary! Nhận: {type(file_changes)}")
 
             # Tạo request cho ChatGPT
-            summary_request = ""
+            messages = []
             for file_name, file_content in file_changes.items():
-                # Check if prompt is none to avoid the string format() method from failing with KeyError
-                if prompt is not None:
-                  summary_request = prompt.format(file_name=file_name, file_content=file_content)
+                # Check if summary_prompt is available to inject variables
+                if summary_prompt:
+                    try:
+                        summary_request = summary_prompt.format(file_name=file_name, file_content=file_content)
+                    except KeyError as e:
+                        print(f"❌ KeyError: {e}.  Check your summary_prompt for correct variable names.")
+                        summary_request = f"Tóm tắt những thay đổi trong file {file_name}:\n{file_content}"  # Fallback
+                    except Exception as e:
+                        print(f"❌ Error formatting summary_prompt: {e}")
+                        summary_request = f"Tóm tắt những thay đổi trong file {file_name}:\n{file_content}"  # Fallback
                 else:
-                  summary_request = f"Tóm tắt những thay đổi trong file {file_name}:\n{file_content}"
+                    summary_request = f"Tóm tắt những thay đổi trong file {file_name}:\n{file_content}"
+
+                messages.append({"role": "user", "content": summary_request})
 
 
             response = self.__client.chat.completions.create(
-                messages=[{"role": "user", "content": summary_request}],
+                messages=messages,  # Use the list of messages we created.
                 model=self.__chat_gpt_model,
                 stream=False,
                 max_tokens=2048
