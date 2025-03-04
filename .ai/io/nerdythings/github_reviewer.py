@@ -14,6 +14,7 @@ import json
 
 PR_SUMMARY_COMMENT_IDENTIFIER = "<!-- PR SUMMARY COMMENT -->"
 PR_SUMMARY_FILES_IDENTIFIER = "<!-- PR SUMMARY FILES -->"
+OWNER_COMMENT_IDENTIFIER = "<!-- OWNER COMMENT -->"
 EXCLUDED_FOLDERS = {".ai/io/nerdythings", ".github/workflows"}
 
 def main():
@@ -43,10 +44,17 @@ def main():
 
     Log.print_yellow(f"Filtered changed files: {changed_files}")
 
-    update_pr_summary(changed_files, ai, github)
+    file_summaries = update_pr_summary(changed_files, ai, github)
 
     for file in changed_files:
         process_file(file, ai, github, vars)
+
+    #Generate and post the owner comment
+    owner_comment = generate_owner_comment(changed_files, github, vars)
+    if owner_comment:
+      post_or_update_owner_comment(github, owner_comment)
+
+
 
 def generate_summary_table(file_summaries):
     """Creates a PR Summary table as a Markdown string."""
@@ -76,7 +84,7 @@ def update_pr_summary(changed_files, ai, github):
 
     # Extract existing summaries from the PR body
     existing_summaries = {}
-    summary_table_match = re.search(f"{PR_SUMMARY_COMMENT_IDENTIFIER}.*?\n(.*?)(\n{PR_SUMMARY_FILES_IDENTIFIER}|\n\n)", current_body, re.DOTALL)
+    summary_table_match = re.search(f"{PR_SUMMARY_COMMENT_IDENTIFIER}.*?\n(.*?)(\n{PR_SUMMARY_FILES_IDENTIFIER}|\n{OWNER_COMMENT_IDENTIFIER}|\n\n)", current_body, re.DOTALL)
     if summary_table_match:
         summary_table_markdown = summary_table_match.group(1).strip()
         # Parse the markdown table to extract existing summaries
@@ -120,6 +128,7 @@ def update_pr_summary(changed_files, ai, github):
     except RepositoryError as e:
         Log.print_red(f"Failed to update PR description: {e}")
 
+    return file_summaries #Returning for the owner comment
 
 def parse_summary_table(markdown_table):
     """Parses the summary table from markdown to extract existing summaries."""
@@ -243,5 +252,72 @@ def parse_ai_suggestions(response):
         if suggestion_text:
             suggestions.append({"text": suggestion_text})
     return suggestions
+
+def generate_owner_comment(changed_files, github, vars):
+    """Generates the owner's comment with dropdowns for each changed file."""
+
+    comment = f"{OWNER_COMMENT_IDENTIFIER}\n## Owner's Review Notes\n"
+    comment += "<details>\n"
+    comment += "  <summary><b>List Change History</b></summary>\n\n"
+
+    for file in changed_files:
+        try:
+            repo = git.Repo(vars.repo_path)
+            try:
+                repo.git.rev_parse('--verify', 'main')
+                base_branch = 'main'
+            except git.exc.GitCommandError:
+                base_branch = vars.base_ref
+
+            diff = repo.git.diff(base_branch, vars.head_ref, '--', file)
+
+            comment += "  <details>\n"
+            comment += f"    <summary><b>{file}</b></summary>\n\n"
+
+            comment += "    <ul>\n"
+            for line in diff.splitlines():
+                comment += f"      <li><code>{line}</code></li>\n"
+            comment += "    </ul>\n\n"
+
+            comment += "    **Impact:** (Summary of impact needs to be manually added here)\n\n" #Manually added because you need domain knowledge to do so
+
+            comment += "  </details>\n\n"
+
+        except Exception as e:
+            Log.print_red(f"Error generating diff for owner comment: {e}")
+            comment += f"  <details>\n"
+            comment += f"    <summary><b>{file}</b> - Error generating diff</summary>\n\n"
+            comment += f"    Error: {e}\n\n"
+            comment += "  </details>\n\n"
+
+    comment += "</details>\n"
+    return comment
+
+def post_or_update_owner_comment(github, comment):
+    """Posts a new comment or updates an existing one."""
+    existing_comments = github.get_comments()
+    owner_comment_exists = False
+
+    for existing_comment in existing_comments:
+        if OWNER_COMMENT_IDENTIFIER in existing_comment['body']:
+            Log.print_yellow("Updating existing owner comment...")
+            try:
+                github.update_comment(existing_comment['id'], comment)
+                Log.print_green("Owner comment updated successfully!")
+            except RepositoryError as e:
+                Log.print_red(f"Failed to update owner comment: {e}")
+            owner_comment_exists = True
+            break
+
+    if not owner_comment_exists:
+        Log.print_yellow("Posting new owner comment...")
+        try:
+            github.post_comment_general(comment)
+            Log.print_green("Owner comment posted successfully!")
+        except RepositoryError as e:
+            Log.print_red(f"Failed to post owner comment: {e}")
+
+
+
 if __name__ == "__main__":
     main()
