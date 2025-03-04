@@ -99,18 +99,27 @@ def update_pr_summary(changed_files, ai, github):
             with open(file, 'r', encoding="utf-8", errors="replace") as f:
                 content = f.read()
 
-                # Tạo summary cho New Feature
-                new_feature_summary = ai.ai_request_summary(file_changes={file: content[:1500]}, prompt=NEW_FEATURE_PROMPT.format(file_content=content[:1500]))
+                escaped_content = content.replace("{", "{{").replace("}", "}}")
 
-                # Tạo summary cho Refactor
-                refactor_summary = ai.ai_request_summary(file_changes={file: content[:1500]}, prompt=REFACTOR_PROMPT.format(file_content=content[:1500]))
+                new_feature_summary = ai.ai_request_summary(
+                    file_changes={file: escaped_content[:1500]},  
+                    prompt=NEW_FEATURE_PROMPT,
+                    file_name=file,
+                    file_content=escaped_content[:1500]  
+                )
+
+                refactor_summary = ai.ai_request_summary(
+                    file_changes={file: escaped_content[:1500]},  
+                    prompt=REFACTOR_PROMPT,
+                    file_name=file,
+                    file_content=escaped_content[:1500]  
+                )
 
                 file_summaries.append({
                     "file": file,
                     "new_feature": new_feature_summary,
                     "refactor": refactor_summary
                 })
-
 
         except FileNotFoundError:
             Log.print_yellow(f"File not found: {file}")
@@ -122,10 +131,8 @@ def update_pr_summary(changed_files, ai, github):
     print(f"all_files: {all_files}")
     print(f"file_summaries: {file_summaries}")
 
-    # Tạo bảng summary
     summary_table = generate_summary_table(all_files, file_summaries)
 
-    # Tạo comment body
     comment_body = f"""## New Features:
 { "".join([f"* {s['file']}: {s['new_feature']}\n" for s in file_summaries]) }
 

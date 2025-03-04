@@ -47,7 +47,7 @@ export const customPrompt = async (req, res, next) => {
         ...req.body, userId: req.user.id
     })
     try {
-        const savePrompt = await newPromptt.save()
+        const savePrompt = await newPrompt.save()
         res.status(201).json(savePrompt)
     } catch (error) {
         next(error)
