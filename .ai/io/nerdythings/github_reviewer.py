@@ -48,20 +48,12 @@ def main():
     for file in changed_files:
         process_file(file, ai, github, vars)
 
-def generate_summary_table(all_files, file_summaries):
+def generate_summary_table(file_summaries):
     """Creates a PR Summary table as a Markdown string."""
     table_header = "| <div style='width:40%'>Files</div> | <div style='width:60%'>Change Summary</div> |\n|---------------------|----------------------------------------------------|"
     table_rows = []
 
-    print(f"Debug: all_files = {all_files}")
-    print(f"Debug: file_summaries = {file_summaries}")
-
-    if len(all_files) != len(file_summaries):
-        Log.print_red("Error: all_files and file_summaries have different lengths!")
-        Log.print_red(f"all_files length: {len(all_files)}, file_summaries length: {len(file_summaries)}")
-        return "Error: Mismatched file and summary counts. Please check the logs."
-
-    for file, summary in zip(all_files, file_summaries):
+    for file, summary in file_summaries.items():  # Iterate through the dictionary
         file_escaped = str(file).replace("|", "|").replace("*", "*").replace("_", "_").replace("\n", "<br>")
         summary_escaped = str(summary).replace("|", "|").replace("*", "*").replace("_", "_").replace("\n", "<br>")
         
@@ -69,7 +61,10 @@ def generate_summary_table(all_files, file_summaries):
 
         row = f"| {file_escaped} | {summary_escaped} |"
         table_rows.append(row)
-        print(f"Debug: Row = {row}")
+
+    if not table_rows:
+        return "No summaries available."  # Handle the case where there are no summaries
+
     return "\n".join([table_header] + table_rows)
 
 
@@ -90,23 +85,21 @@ def update_pr_summary(changed_files, ai, github):
 
     all_files = list(set(changed_files + existing_files))
 
-    file_summaries = []
+    # Use a dictionary to store file: summary pairs
+    file_summaries = {}
     for file in all_files:
         try:
             with open(file, 'r', encoding="utf-8", errors="replace") as f:
                 content = f.read()
                 new_summary = ai.ai_request_summary(file_changes={file:content[:1500]})
-                file_summaries.append(new_summary)
+                file_summaries[file] = new_summary
         except FileNotFoundError:
             Log.print_yellow(f"File not found: {file}")
-            file_summaries.append(f"File not found: {file}")
+            file_summaries[file] = f"File not found: {file}"  # Store the error message
         except Exception as e:
             Log.print_red(f"Error processing file {file}: {e}")
-            file_summaries.append(f"Error processing file {file}: {e}")
-
-    print(f"all_files: {all_files}")
-    print(f"file_summaries: {file_summaries}")
-    summary_table = generate_summary_table(all_files, file_summaries)
+            file_summaries[file] = f"Error processing file {file}: {e}" # Store the error message
+    summary_table = generate_summary_table(file_summaries)
 
     # files_comment = f"{PR_SUMMARY_FILES_IDENTIFIER}{json.dumps(all_files)}{PR_SUMMARY_FILES_IDENTIFIER}"  # Loại bỏ dòng này
 
