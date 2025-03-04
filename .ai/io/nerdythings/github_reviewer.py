@@ -50,25 +50,28 @@ def main():
 
 def generate_summary_table(all_files, file_summaries):
     """Creates a PR Summary table as a Markdown string."""
-    table_header = "| Files | Change Summary |\n|---|---|"
+    table_header = "| <div style='width:40%'>Files</div> | <div style='width:60%'>Change Summary</div> |\n|---------------------|----------------------------------------------------|"
     table_rows = []
 
-    print(f"Debug: all_files = {all_files}")  # Debugging
-    print(f"Debug: file_summaries = {file_summaries}")  # Debugging
+    print(f"Debug: all_files = {all_files}")
+    print(f"Debug: file_summaries = {file_summaries}")
 
     if len(all_files) != len(file_summaries):
         Log.print_red("Error: all_files and file_summaries have different lengths!")
-        return "Error: Mismatched file and summary counts."
+        Log.print_red(f"all_files length: {len(all_files)}, file_summaries length: {len(file_summaries)}")
+        return "Error: Mismatched file and summary counts. Please check the logs."
 
     for file, summary in zip(all_files, file_summaries):
-        # Escape Markdown special characters
-        file_escaped = file.replace("|", "\\|").replace("*", "\\*").replace("_", "\\_")
-        summary_escaped = summary.replace("|", "\\|").replace("*", "\\*").replace("_", "\\_")
+        file_escaped = str(file).replace("|", "|").replace("*", "*").replace("_", "_").replace("\n", "<br>")
+        summary_escaped = str(summary).replace("|", "|").replace("*", "*").replace("_", "_").replace("\n", "<br>")
+        
+        summary_escaped = re.sub(r"^\s*[-•]\s*", "", summary_escaped, flags=re.MULTILINE)
 
         row = f"| {file_escaped} | {summary_escaped} |"
         table_rows.append(row)
-        print(f"Debug: Row = {row}") # Debugging each row
+        print(f"Debug: Row = {row}")
     return "\n".join([table_header] + table_rows)
+
 
 def update_pr_summary(changed_files, ai, github):
     Log.print_green("Updating PR description...")
@@ -92,12 +95,7 @@ def update_pr_summary(changed_files, ai, github):
         try:
             with open(file, 'r', encoding="utf-8", errors="replace") as f:
                 content = f.read()
-                # Modify prompt to focus on business impact/purpose
-                business_prompt = SUMMARY_PROMPT.replace(
-                    "Hãy tóm tắt mục đích kinh doanh hoặc tác động của các thay đổi trong file sau đây.",
-                    "Hãy tóm tắt chi tiết (từ 3-5 dòng) mục đích kinh doanh hoặc tác động của các thay đổi trong file sau đây. Mô tả rõ ràng vấn đề nào được giải quyết, giá trị nào được mang lại cho người dùng hoặc hệ thống, và cách thay đổi này ảnh hưởng đến trải nghiệm người dùng hoặc hiệu suất hệ thống."
-                )
-                new_summary = ai.ai_request_summary(file_changes={file:content[:1500]}, prompt=business_prompt)
+                new_summary = ai.ai_request_summary(file_changes={file:content[:1500]})
                 file_summaries.append(new_summary)
         except FileNotFoundError:
             Log.print_yellow(f"File not found: {file}")
@@ -110,17 +108,17 @@ def update_pr_summary(changed_files, ai, github):
     print(f"file_summaries: {file_summaries}")
     summary_table = generate_summary_table(all_files, file_summaries)
 
-    files_comment = f"{PR_SUMMARY_FILES_IDENTIFIER}{json.dumps(all_files)}{PR_SUMMARY_FILES_IDENTIFIER}"
+    # files_comment = f"{PR_SUMMARY_FILES_IDENTIFIER}{json.dumps(all_files)}{PR_SUMMARY_FILES_IDENTIFIER}"  # Loại bỏ dòng này
 
     if PR_SUMMARY_COMMENT_IDENTIFIER in current_body:
         updated_body = re.sub(
             f"{PR_SUMMARY_COMMENT_IDENTIFIER}.*",
-            f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}\n\n{files_comment}",
+            f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}",  # Loại bỏ files_comment
             current_body,
             flags=re.DOTALL
         )
     else:
-        updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}\n\n{files_comment}\n\n{current_body}"
+        updated_body = f"{PR_SUMMARY_COMMENT_IDENTIFIER}\n## Summary by BAP_Review\n\n{summary_table}\n\n{current_body}"  # Loại bỏ files_comment
 
     try:
         github.update_pull_request(updated_body)
