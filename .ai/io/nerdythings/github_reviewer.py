@@ -90,6 +90,7 @@ def update_pr_summary(changed_files, ai, github):
         try:
             with open(file, 'r', encoding="utf-8", errors="replace") as f:
                 content = f.read()
+                # Pass SUMMARY_PROMPT here:
                 new_summary = ai.ai_request_summary(file_changes={file:content[:1500]}, summary_prompt=SUMMARY_PROMPT)
                 file_summaries[file] = new_summary
         except FileNotFoundError:
@@ -117,7 +118,6 @@ def update_pr_summary(changed_files, ai, github):
         Log.print_yellow("PR description updated successfully!")
     except RepositoryError as e:
         Log.print_red(f"Failed to update PR description: {e}")
-
 
 def process_file(file, ai, github, vars):
     Log.print_green(f"Reviewing file: {file}")
