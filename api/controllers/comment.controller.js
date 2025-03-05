@@ -4,7 +4,7 @@ import { errorHandler } from "../utils/error.js"
 export const createcomment = async (req, res, next) => {
     try {
         const {content, postId, userId} = req.body
-        if(userId ! req.user.id){
+        if(userId !== req.user.id){
             return next(errorHandler(403, 'You are not allow to create this comment'))
         }
         const newComment = new Comment({
