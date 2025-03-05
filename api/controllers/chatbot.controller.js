@@ -13,7 +13,7 @@ export const importdata = async (req, res, next) => {
         ...req.body, userId: req.user.id
     })
     try {
-        const saveData = await newData.save()
+        const saveData = await newData.saved()
         res.status(201).json(saveData)
     } catch (error) {
         next(error)
