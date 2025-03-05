@@ -52,7 +52,7 @@ export const getpost = async (req, res, next) => {
         now.getDate()
       );
   
-      const lastMonthPosts = await Pist.countDocuments({
+      const lastMonthPosts = await Post.countDocuments({
         createdAt: { $gte: oneMonthAgo },
       });
   
