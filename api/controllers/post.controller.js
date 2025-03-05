@@ -55,6 +55,8 @@ export const getpost = async (req, res, next) => {
       const lastMonthPosts = await Post.countDocuments({
         createdAt: { $gte: oneMonthAgo },
       });
+      
+      sjsjsj
   
       res.status(200).json({
         posts,
