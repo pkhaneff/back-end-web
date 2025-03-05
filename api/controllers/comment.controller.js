@@ -15,7 +15,7 @@ export const createcomment = async (req, res, next) => {
 
         await newComment.save()
 
-        res.status(200).json(newComments)
+        res.status(200).json(newComment)
     } catch (error) {
         next(error)
     }
