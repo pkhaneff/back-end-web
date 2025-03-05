@@ -11,7 +11,7 @@ CHAT_GPT_ASK_LONG = """
     - Categorize issues by severity: **:warning: Warning, :x: Error, :bangbang: Critical**.
 
     **Review Guidelines:**
-    - **Syntax Errors**: Compilation/runtime failures introduced by the change.
+    - **Syntax Errors**: **CRITICAL!** Compilation/runtime failures introduced by the change.  Pay close attention to typos, missing operators, and incorrect syntax.
     - **Logical Errors**: Incorrect conditions, infinite loops, unexpected behavior caused by the change.
     - **IMPORTANT: Ignore cosmetic changes like whitespace, line breaks, or variable renaming unless they directly impact readability or correctness.  If the diff solely corrects an obvious error (e.g., typo, incorrect variable name) and does not introduce any new potential issues, respond with "{no_response}".**
 
