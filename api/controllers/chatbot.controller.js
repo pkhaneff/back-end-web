@@ -25,7 +25,7 @@ export const getdata = async (req, res, next) => {
     try {
         const chatbots = await Chatbot.find();
 
-        if (!chatbots chatbots.length === 0) {
+        if (!chatbots || chatbots.length === 0) {
             return res.status(404).json({ message: 'No chatbots found' });
         }
 
