@@ -33,7 +33,7 @@ CHAT_GPT_ASK_LONG = """
     {suggested_fix}
     ```
 
-    **Ensure `suggested_fix` is always a single-line change represented as a standard diff format (e.g., `-old line` followed by `+new line`). If a multi-line change is needed, break it into multiple single-line suggestions in separate issues.**
+    **Ensure suggested_fix is always a single-line change, represented as a standard diff format with only the new line (e.g., +new line). Do not include the old line in the output. If a multi-line change is needed, break it into multiple single-line suggestions in separate issues.**
 
     **:pushpin:Important Notes:**
     *   The review **MUST** be based solely on the provided `diffs`. If there are no issues within the `diffs`, then respond with "{no_response}".
