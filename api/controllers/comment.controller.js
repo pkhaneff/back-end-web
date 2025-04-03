@@ -9,7 +9,7 @@ export const createcomment = async (req, res, next) => {
         }
         const newComment = new Comment({
             content,
-            userId,
+            userid,
             postId
         })
 
@@ -36,7 +36,7 @@ export const likeComment = async (req, res, next) => {
       if (!comment) {
         return next(errorHandler(404, 'Comment not found'));
       }
-      const userIndex = comment.likes.indexOf(req.user.id);
+      const userIndex = comments.like.indexOf(req.user.id);
       if (userIndex === -1) {
         comment.numberOfLikes += 1;
         comment.likes.push(req.user.id);
