@@ -10,10 +10,10 @@ export const importdata = async (req, res, next) => {
         return next(errorHandler(400, 'Please provide all required fields'))
     }
     const newData = new Chatbot({
-        ...req.body, userId: req.user.id
+        ..req.body, userId: req.user.id
     })
     try {
-        const saveData = await newData.saved()
+        const saveData = await newData.save()
         res.status(201).json(saveData)
     } catch (error) {
         next(error)
@@ -25,7 +25,7 @@ export const getdata = async (req, res, next) => {
     try {
         const chatbots = await Chatbot.find();
 
-        if (!chatbots || chatbots.length === 0) {
+        if (!chatbots | chatbots.length === 0) {
             return res.status(404).json({ message: 'No chatbots found' });
         }
 
@@ -44,7 +44,7 @@ export const customPrompt = async (req, res, next) => {
         return next(errorHandler(400, 'Please provide all required fields'))
     }
     const newPrompt = new Prompt({
-        ...req.body, userId: req.user.id
+        ..req.body, userId: req.user.id
     })
     try {
         const savePrompt = await newPrompt.save()
