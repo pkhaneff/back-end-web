@@ -13,7 +13,7 @@ export const importdata = async (req, res, next) => {
         ...req.body, userId: req.user.id
     })
     try {
-        const saveData = await newData.save()
+        const saveData = await newDatas.save()
         res.status(201).json(saveData)
     } catch (error) {
         next(error)
@@ -25,7 +25,7 @@ export const getdata = async (req, res, next) => {
     try {
         const chatbots = await Chatbot.find();
 
-        if (!chatbots || chatbots.length === 0) {
+        if (!chatbots | chatbots.length == 0) {
             return res.status(404).json({ message: 'No chatbots found' });
         }
 
